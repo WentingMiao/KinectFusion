@@ -1,15 +1,7 @@
 #include "Frame.h"
 
 
-// Frame::Frmae( float* _depthMap,  BYTE* colorMap, Matrix3f _depthIntrinsics, Matrix4f _depthExtrinsicsInv, unsigned int _width, unsigned int _height)
-//Frame::Frame(VirtualSensor& sensor, float _edgeThreshold)
-    // : _sensor(sensor),_width(sensor.GetDepthImage_width()), _height(sensor.GetDepthImage_height()),             ,_depthMap(sensor.GetDepth()),colorMap(sensor.GetColorRGBX()), _depthIntrinsics(sensor.Get_depthIntrinsics()),_edgeThreshold(_edgeThreshold) ,_depthExtrinsics(sensor.Get_depthExtrinsics()), _trajectory(sensor.Get_trajectory())
-//    {
-        // std::cout << _depthMap[20] <<std::endl;
-        // _depthMap = sensor.GetDepth();
-        // std::cout << _width <<std::endl;
-       // _sensor = sensor;
-//    }
+
 
 
 //constructor of Frame
@@ -21,42 +13,47 @@ Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics,
     _colorMap = std::vector<Vector4uc>(_width * _height);
     for (unsigned int i = 0 ; i < _width * _height; i++){
          _depthMap[i] = _depthMap[i];
+
+         // color is stored as RGBX in row major (4 byte values per pixel) 
+         // so the size of colorMap is 4 * width * height
+         // we convert it to 4 unsigned char type
          _colorMap[i] = Vector4uc(colorMap[4*i], colorMap[4*i+1], colorMap[4*i+2], colorMap[4*i+3]);
     }
 
 }
 
-// std::vector<Eigen::Vector4f> Frame::fromPixelToWorld(){
+
+std::vector<Eigen::Vector4f> Frame::getCameraPoints(){
     
-//     std::vector<Eigen::Vector4f> points( _width*_height );
+    std::vector<Eigen::Vector4f> points( _width*_height );
 
-//     float fX = _depthIntrinsics(0, 0);
-// 	float fY = _depthIntrinsics(1, 1);
-// 	float cX = _depthIntrinsics(0, 2);
-// 	float cY = _depthIntrinsics(1, 2);
+    float fX = _depthIntrinsics(0, 0);
+	float fY = _depthIntrinsics(1, 1);
+	float cX = _depthIntrinsics(0, 2);
+	float cY = _depthIntrinsics(1, 2);
 
-//     for(unsigned int row = 0; row < _height; row++){
-//         for(unsigned int col = 0; col < _width; col++){
-//             int idx = row * _width + col;
-//             float z = _depthMap[idx]; 
+    for(unsigned int row = 0; row < _height; row++){
+        for(unsigned int col = 0; col < _width; col++){
+            int idx = row * _width + col;
+            float z = _depthMap[idx]; 
             
-//             if(z == MINF){
-//                 points[idx] = Vector4f(MINF, MINF, MINF, MINF);
-// 			}else{
-//                 float u = col;
-// 				float v = row;
-// 				float x = z*(u-cX)/fX; 
-// 				float y = z*(v-cX)/fY; 
+            if(z == MINF){
+                points[idx] = Vector4f(MINF, MINF, MINF, MINF);
+			}else{
+                float u = col;
+				float v = row;
+				float x = z*(u-cX)/fX; 
+				float y = z*(v-cX)/fY; 
                 
-// 				// point_c = Vector4f(x, y, x, 1.0);
-//                 points[idx] =  _trajectory.inverse() * _depthExtrinsics.inverse() * Vector4f(x, y, x, 1.0);
+				// point_c = Vector4f(x, y, x, 1.0);
+                points[idx] =  _trajectory.inverse() * _depthExtrinsics.inverse() * Vector4f(x, y, x, 1.0);
                 
-//             }
-//         }
-//     }
-//     return points;
+            }
+        }
+    }
+    return points;
 
-// }
+}
 
 Vector3f cross(Vector4f v1, Vector4f v2){
     Vector3f v1_ = v1.head<3>();
