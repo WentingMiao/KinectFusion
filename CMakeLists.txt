@@ -25,9 +25,17 @@ set(CMAKE_CXX_STANDARD 14)
 #find required packages 
 find_package(Eigen3 REQUIRED)
 
+set(HEADERS 
+    Eigen.h
+    FreeImageHelper.h
+    VirtualSensor.h
+    Frame.h
+)
+
 set(SOURCES
     main.cpp
     FreeImageHelper.cpp
+    Frame.cpp
 )
 
 
