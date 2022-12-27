@@ -70,7 +70,9 @@ std::vector<Vertex>  Frame::getVertices(){
 	float fY = _depthIntrinsics(1, 1);
 	float cX = _depthIntrinsics(0, 2);
 	float cY = _depthIntrinsics(1, 2);
-
+    
+    // if the depth value at idx is invalid (MINF) we set position and color of the point invalid
+	// otherwise we apply back-projection and transform the point to world space
     for(unsigned int row = 0; row < _height; row++){
         for(unsigned int col = 0; col < _width; col++){
             int idx = row * _width + col;
@@ -85,10 +87,14 @@ std::vector<Vertex>  Frame::getVertices(){
                 float u = col;
 				float v = row;
 
+                // Back-projection to camera space.
 				float x = z*(u-cX)/fX; 
 				float y = z*(v-cX)/fY; 
                 
+                //get the point in camera coordinate
 				point_c = Vector4f(x, y, z, 1.0);
+
+                //get the point in global coordinate/ world coordinate
                 point_w =  _trajectory.inverse() * _depthExtrinsics.inverse() * point_c;
                 
 
@@ -98,19 +104,22 @@ std::vector<Vertex>  Frame::getVertices(){
         }
     }
 
-    //compute normal
-
+    //compute normal, apply Principal Component Analysis
+    //1. search for points in the neighbourhood
+    //2. compute principal component
+    //3. normalize the norm
     for(unsigned int row = 1; row < _height - 1; row++){
         for(unsigned int col = 1; col < _width - 1; col++){
             int idx = row * _width + col;
 
+            //1. search for points in the neighbourhood
             Vector4f point = vertices[idx].position;
             Vector4f leftPoint = vertices[idx - 1].position;
             Vector4f rightPoint = vertices[idx + 1].position;
             Vector4f upperPoint = vertices[idx - _width].position;
             Vector4f lowerPoint = vertices[idx + _width].position;
 
-
+            //2. compute principal component
             Vector4f du =  vertices[idx + 1].position - vertices[idx - 1].position;
             Vector4f dv =  vertices[idx + _width].position - vertices[idx - _width].position;
 
@@ -119,8 +128,11 @@ std::vector<Vertex>  Frame::getVertices(){
                 vertices[idx].normal = Vector3f(MINF, MINF, MINF);
             }
             else{
+                // getting the norm by cross product of two vectors made up of neighbours
                 Vector3f normal = cross(du,dv);
                 normal = normal.normalized();
+
+                //3. normalize the norm
                 vertices[idx].normal = normal;
             }
 
@@ -144,9 +156,7 @@ std::vector<Vertex>  Frame::getVertices(){
 
 
 }
-// std::vector<Eigen::Vector4f> fromCameraToWorld(std::vector<Eigen::Vector4f> points_c){
-    
-// }
+
 
 
 
