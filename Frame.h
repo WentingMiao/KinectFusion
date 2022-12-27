@@ -13,35 +13,45 @@ struct Vertex{
 };
 
 class Frame{
-    private:
-        unsigned int width;
-        unsigned int height;
 
-        float* depthMap;
-        BYTE* colorMap;
+    
+    public:
 
-        Matrix3f depthIntrinsics;
-        Matrix4f depthExtrinsics;
-        Matrix4f trajectory;
+        //Frame(VirtualSensor& sensor, float edgeThreshold);
+        Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics, Eigen::Matrix4f &depthExtrinsics, 
+         Eigen::Matrix4f &trajectory, unsigned int width,unsigned int height, float edgeThreshold = 2);
 
-        float edgeThreshold;
+
+        // get points of camera cooridinate
+        // std::vector<Eigen::Vector4f> fromPixelToWorld();
+  
+        std::vector<Vertex> getVertices();
+
+        std::vector<float> getDepthMap();
+        std::vector<Vector4uc> getColorMap();
+
+        unsigned int getWidth();
+        unsigned int getHeight();
+
+     private:
+        unsigned int _width;
+        unsigned int _height;
+    
+        
+        std::vector<float> _depthMap;
+        // BYTE* _colorMap;
+        std::vector<Vector4uc> _colorMap;
+
+        Matrix3f _depthIntrinsics;
+        Matrix4f _depthExtrinsics;
+        Matrix4f _trajectory;
+
+        float _edgeThreshold;
 
        // std::vector<Eigen::Vector4f> points_c;
         std::vector<Eigen::Vector4f> points_w;
         std::vector<Vertex> vertices;
         
-        Vector3f cross(Vector4f v1, Vector4f v2);
+        // Vector3f cross(Vector4f v1, Vector4f v2);
 
-    public:
-
-        Frame(VirtualSensor sensor, float edgeThreshold);
-        
-
-        // get points of camera cooridinate
-        std::vector<Eigen::Vector4f> fromPixelToWorld();
-  
-        std::vector<Vertex>  getVertices();
-
-        float* getDepthMap();
-     
 };
