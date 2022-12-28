@@ -16,15 +16,17 @@ FreeImage, Eigen
 
 1. Data folder
     
-    Create a data folder on the top level and add the data file inside.
+    Create a ```Data/``` folder on the top level and add the data file inside.
     
     e.g Data/rgbd_dataset_freiburg1_xyz/..
     
 2. Build directory 
     
-    Create the build folder and in this case, we can create an out-of-source build.
+    Create the ```build/``` folder and in this case, we can create an out-of-source build.
     
-
+3. Libs folder
+	Create a ```Libs/``` folder to store packages.
+	
 # Run the project:
 
 After all the packages are prepared and structure requirements are met, we run the project:
