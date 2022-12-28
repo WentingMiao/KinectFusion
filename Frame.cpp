@@ -58,7 +58,8 @@ std::vector<Eigen::Vector4f> Frame::getCameraPoints(){
 Vector3f cross(Vector4f v1, Vector4f v2){
     Vector3f v1_ = v1.head<3>();
     Vector3f v2_ = v2.head<3>();
-    return v1_.cross(v2_);
+    Vector3f normal = v1_.cross(v2_);
+    return normal;
 }
 
 std::vector<Vertex>  Frame::getVertices(){
@@ -124,7 +125,8 @@ std::vector<Vertex>  Frame::getVertices(){
             Vector4f dv =  vertices[idx + _width].position - vertices[idx - _width].position;
 
             //we set normal to invalid when vertex are too far away from its neigbours
-            if(!du.allFinite()||!dv.allFinite()||du.norm() >= _edgeThreshold||dv.norm() >= _edgeThreshold){
+            // if(!du.allFinite()||!dv.allFinite()||du.norm() >= _edgeThreshold||dv.norm() >= _edgeThreshold){
+            if(du.norm() >= _edgeThreshold||dv.norm() >= _edgeThreshold){
                 vertices[idx].normal = Vector3f(MINF, MINF, MINF);
             }
             else{

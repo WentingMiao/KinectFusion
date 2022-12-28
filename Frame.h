@@ -50,6 +50,4 @@ class Frame{
         // std::vector<Eigen::Vector4f> points_w;
         std::vector<Vertex> vertices;
         
-      
-
 };
