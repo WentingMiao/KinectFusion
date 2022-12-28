@@ -12,7 +12,7 @@ Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics,
     _depthMap = std::vector<float>(_width * _height);
     _colorMap = std::vector<Vector4uc>(_width * _height);
     for (unsigned int i = 0 ; i < _width * _height; i++){
-         _depthMap[i] = _depthMap[i];
+         _depthMap[i] = depthMap[i];
 
          // color is stored as RGBX in row major (4 byte values per pixel) 
          // so the size of colorMap is 4 * width * height
@@ -32,8 +32,8 @@ std::vector<Eigen::Vector4f> Frame::getCameraPoints(){
 	float cX = _depthIntrinsics(0, 2);
 	float cY = _depthIntrinsics(1, 2);
 
-    for(unsigned int row = 0; row < _height; row++){
-        for(unsigned int col = 0; col < _width; col++){
+    for(int row = 0; row < _height; row++){
+        for(int col = 0; col < _width; col++){
             int idx = row * _width + col;
             float z = _depthMap[idx]; 
             
@@ -42,11 +42,11 @@ std::vector<Eigen::Vector4f> Frame::getCameraPoints(){
 			}else{
                 float u = col;
 				float v = row;
-				float x = z*(u-cX)/fX; 
-				float y = z*(v-cX)/fY; 
+				float x = ( u - cX) / fX * z; 
+				float y = ( v - cX) / fY * z; 
                 
-				// point_c = Vector4f(x, y, x, 1.0);
-                points[idx] =  _trajectory.inverse() * _depthExtrinsics.inverse() * Vector4f(x, y, x, 1.0);
+				// point_c = Vector4f(x, y, z, 1.0);
+                points[idx] =  _trajectory.inverse() * _depthExtrinsics.inverse() * Vector4f(x, y, z, 1.0);
                 
             }
         }
@@ -178,5 +178,13 @@ unsigned int Frame::getWidth(){
 
 unsigned int Frame::getHeight(){
     return _height;
+}
+
+Matrix4f Frame::getDepthExtrinsics(){
+    return _depthExtrinsics;
+}
+
+Matrix3f Frame::getDepthIntrinsics(){
+    return _depthIntrinsics;
 }
 

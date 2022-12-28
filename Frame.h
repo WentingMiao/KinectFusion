@@ -29,6 +29,8 @@ class Frame{
         std::vector<float> getDepthMap(); //get depthmap of the frame
         std::vector<Vector4uc> getColorMap(); //get the colormap of the frame, type is Vector4uc 
 
+        Matrix4f getDepthExtrinsics(); // get depth extrinsives
+        Matrix3f getDepthIntrinsics(); // get camera intrinsives
         unsigned int getWidth(); //get width of depth image
         unsigned int getHeight(); //get height of depth image
 

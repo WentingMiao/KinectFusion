@@ -41,18 +41,11 @@ int execute(){
     Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold);
 
     /** check if the constructor works **/
-
     // std::cout<< sensor.GetDepth()[27876]<<std::endl;
     // std::cout<< currentFrame.getDepthMap()[27876]<<std::endl;
 
     std::vector<Vertex> vertices = currentFrame.getVertices();
-
-    /** check if getVertices functions works*/
-    // std::cout<< vertices[27876].position << std::endl;
-    // std::cout<< vertices[27876].normal << std::endl;// get 0,0,0
-    // std::cout<< vertices[30076].normal << std::endl;// get 0,0,0
-    // std::cout<< vertices[17802].normal << std::endl; // get 0,0,0
-
+    
     
     return 0;
 }
@@ -63,6 +56,14 @@ int main(){
     int res;
     
     res = execute();
-    
+
+    // Vector4f v1 = Vector4f(4.0,2.0,7.0,1.0);
+    // Vector4f v2 = Vector4f(3.0,5.0,4.0,1.0);
+    // Vector3f v1_ = v1.head<3>();
+    // Vector3f v2_ = v2.head<3>();
+    // Vector3f normal = v1_.cross(v2_);
+    // std::cout<<normal<<std::endl;
+    // std::cout<<normal.normalized()<<std::endl;
+
     return 0;
 }
