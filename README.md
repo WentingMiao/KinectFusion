@@ -1,5 +1,3 @@
-# KinectFusion ReadmeFile
-
 # Introduction
 
 Kinect Fusion is a technology that allows for the reconstruction of 3D models of real-world objects and scenes using depth data from a Kinect sensor. The original version of Kinect Fusion has been widely used in various applications, including 3D printing and virtual and augmented reality. However, with advancements in computational techniques and algorithms, it is possible to improve upon the original implementation to create a more accurate and efficient version of the technology. This project aims to achieve this goal through the use of updated algorithms and more efficient computation methods, with the ultimate goal of creating a robust and versatile tool for 3D modeling and other applications. As a re-implementation work, we will still implement the various modules according to the original version of Kinect Fusion.
