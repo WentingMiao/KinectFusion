@@ -344,34 +344,33 @@ void Frame::buildDepthPyramid(vector<float>& originalMap, vector<vector<float>>&
               arr.insert(arr.end(), gpyramid[i].ptr<float>(i), gpyramid[i].ptr<float>(i) + gpyramid[i].cols*gpyramid[i].channels());
             }
         }
-        cout<<arr.size()<< endl;
         outputMap.push_back(arr);
     }
 
 }
 
 void Frame::buildColorPyramid(vector<Vector4uc>& originalMap, vector<vector<Vector4uc>>& outputMap, unsigned int maxLevel){
-
-    const Mat cvOriginalMap(_width, _height,  CV_32F, reinterpret_cast<void*>(originalMap.data()));
-
-    vector<Mat> gpyramid;
-
-    buildPyramid(cvOriginalMap, gpyramid, maxLevel);
-
-    /* convert mat to vector */
-    for(size_t i = 0; i < gpyramid.size(); i++){
-        vector<float> arr;
-        if (gpyramid[i].isContinuous()) {
-            arr.assign((float*)gpyramid[i].data, (float*)gpyramid[i].data + gpyramid[i].total()*gpyramid[i].channels());
-        }else{
-            for (int i = 0; i < gpyramid[i].rows; ++i) {
-              arr.insert(arr.end(), gpyramid[i].ptr<float>(i), gpyramid[i].ptr<float>(i) + gpyramid[i].cols*gpyramid[i].channels());
-            }
-        }
-        cout<<arr.size()<< endl;
-        outputMap.push_back(arr);
-    }
+    //todo
 
 }
 
 
+Matrix3f Frame::getLevelCameraIntrinstics(unsigned int level){
+    if(level == 0){
+        return _depthIntrinsics;
+    }
+
+    Matrix3f levelCameraIntrinstics{_depthIntrinsics};
+
+    float scale = pow(0.5, level);
+
+    levelCameraIntrinstics(0,0) *= scale; // focal x
+    levelCameraIntrinstics(1,1) *= scale; // focal y
+
+    levelCameraIntrinstics(0,1) *= scale;  //axis skew (usually 0)
+
+    levelCameraIntrinstics(0,2) *= scale; //principal point mx
+    levelCameraIntrinstics(1,2) *= scale; // principal point my
+
+    return levelCameraIntrinstics;
+}

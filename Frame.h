@@ -31,7 +31,7 @@ class Frame{
         void buildDepthPyramid(vector<float>& originalMap, vector<vector<float>>& outputMap,unsigned int maxLevel);
         void buildColorPyramid(vector<Vector4uc>& originalMap, vector<vector<Vector4uc>>& outputMap, unsigned int maxLevel);
 
-        Matrix3f getLevelCameraIntrinstics(unsigned int level);
+        
 
         bool writeMesh(vector<Vertex>& vectices, const string& filename);
 
@@ -47,6 +47,7 @@ class Frame{
         vector<Vertex> getVertices(); // get vertices of the frame
         vector<float> getDepthMap(); //get depthmap of the frame
         vector<Vector4uc> getColorMap(); //get the colormap of the frame, type is Vector4uc 
+        Matrix3f getLevelCameraIntrinstics(unsigned int level);
 
         Matrix4f getDepthExtrinsics(); // get depth extrinsives
         Matrix3f getDepthIntrinsics(); // get camera intrinsives
