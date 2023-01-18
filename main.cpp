@@ -14,7 +14,7 @@ int execute(){
     std::string filenameIn =  "../Data/rgbd_dataset_freiburg1_xyz/";
 
     //path to the output 
-    std::string filenameBaseOut = "./results/mesh_";
+    std::string filenameBaseOut = "../results/mesh_";
     std::cout << "Initialize virtual sensor..." << std::endl;
 
     VirtualSensor sensor;
@@ -44,7 +44,16 @@ int execute(){
     // std::cout<< sensor.GetDepth()[27876]<<std::endl;
     // std::cout<< currentFrame.getDepthMap()[27876]<<std::endl;
 
-    std::vector<Vertex> vertices = currentFrame.getVertices();
+    vector<Vertex> vertices = currentFrame.getVertices();
+
+    
+    stringstream ss;
+	ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
+    cout<<ss.str()<<endl;
+    if (!currentFrame.writeMesh(vertices,ss.str())){
+			cout << "Failed to write mesh!\nCheck file path!" << endl;
+			return -1;
+	}
     
     
     return 0;
@@ -57,13 +66,7 @@ int main(){
     
     res = execute();
 
-    // Vector4f v1 = Vector4f(4.0,2.0,7.0,1.0);
-    // Vector4f v2 = Vector4f(3.0,5.0,4.0,1.0);
-    // Vector3f v1_ = v1.head<3>();
-    // Vector3f v2_ = v2.head<3>();
-    // Vector3f normal = v1_.cross(v2_);
-    // std::cout<<normal<<std::endl;
-    // std::cout<<normal.normalized()<<std::endl;
+    
 
-    return 0;
+    return res;
 }
