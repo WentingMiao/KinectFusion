@@ -325,3 +325,53 @@ bool Frame::writeMesh(vector<Vertex>& vertices, const string& filename){
     return true;
 
 }
+
+void Frame::buildDepthPyramid(vector<float>& originalMap, vector<vector<float>>& outputMap, unsigned int maxLevel){
+
+    const Mat cvOriginalMap(_width, _height,  CV_32F, reinterpret_cast<void*>(originalMap.data()));
+
+    vector<Mat> gpyramid;
+
+    buildPyramid(cvOriginalMap, gpyramid, maxLevel);
+
+    /* convert mat to vector */
+    for(size_t i = 0; i < gpyramid.size(); i++){
+        vector<float> arr;
+        if (gpyramid[i].isContinuous()) {
+            arr.assign((float*)gpyramid[i].data, (float*)gpyramid[i].data + gpyramid[i].total()*gpyramid[i].channels());
+        }else{
+            for (int i = 0; i < gpyramid[i].rows; ++i) {
+              arr.insert(arr.end(), gpyramid[i].ptr<float>(i), gpyramid[i].ptr<float>(i) + gpyramid[i].cols*gpyramid[i].channels());
+            }
+        }
+        cout<<arr.size()<< endl;
+        outputMap.push_back(arr);
+    }
+
+}
+
+void Frame::buildColorPyramid(vector<Vector4uc>& originalMap, vector<vector<Vector4uc>>& outputMap, unsigned int maxLevel){
+
+    const Mat cvOriginalMap(_width, _height,  CV_32F, reinterpret_cast<void*>(originalMap.data()));
+
+    vector<Mat> gpyramid;
+
+    buildPyramid(cvOriginalMap, gpyramid, maxLevel);
+
+    /* convert mat to vector */
+    for(size_t i = 0; i < gpyramid.size(); i++){
+        vector<float> arr;
+        if (gpyramid[i].isContinuous()) {
+            arr.assign((float*)gpyramid[i].data, (float*)gpyramid[i].data + gpyramid[i].total()*gpyramid[i].channels());
+        }else{
+            for (int i = 0; i < gpyramid[i].rows; ++i) {
+              arr.insert(arr.end(), gpyramid[i].ptr<float>(i), gpyramid[i].ptr<float>(i) + gpyramid[i].cols*gpyramid[i].channels());
+            }
+        }
+        cout<<arr.size()<< endl;
+        outputMap.push_back(arr);
+    }
+
+}
+
+

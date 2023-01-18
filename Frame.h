@@ -27,9 +27,16 @@ class Frame{
 
 
         void applyBilateralFilter(vector<float>& originalDepth, vector<float>& outputDepth);
+
+        void buildDepthPyramid(vector<float>& originalMap, vector<vector<float>>& outputMap,unsigned int maxLevel);
+        void buildColorPyramid(vector<Vector4uc>& originalMap, vector<vector<Vector4uc>>& outputMap, unsigned int maxLevel);
+
+        Matrix3f getLevelCameraIntrinstics(unsigned int level);
+
         bool writeMesh(vector<Vertex>& vectices, const string& filename);
 
-        
+
+
         /*setter function*/
         void setFilterSize(int size);
         void setSigmaColor(double sigmaColor);
@@ -65,8 +72,6 @@ class Frame{
 
         float _edgeThreshold;
 
-       // vector<Eigen::Vector4f> points_c;
-        // vector<Eigen::Vector4f> points_w;
         vector<Vertex> vertices;
         
 };

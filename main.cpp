@@ -40,20 +40,26 @@ int execute(){
 
     Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold);
 
-    /** check if the constructor works **/
-    // std::cout<< sensor.GetDepth()[27876]<<std::endl;
-    // std::cout<< currentFrame.getDepthMap()[27876]<<std::endl;
+    vector<float> depthVectorMap = currentFrame.getDepthMap();
+    unsigned int levelSize = 5;
+    vector<vector<float>> depthPyramid ;
+
+    currentFrame.buildDepthPyramid(depthVectorMap, depthPyramid, levelSize);
+    for(int i=0;i<depthPyramid.size();i++){
+            cout<<i<<" "<< depthPyramid[i].size() <<endl;
+    }
 
     vector<Vertex> vertices = currentFrame.getVertices();
-
     
-    stringstream ss;
-	ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
-    cout<<ss.str()<<endl;
-    if (!currentFrame.writeMesh(vertices,ss.str())){
-			cout << "Failed to write mesh!\nCheck file path!" << endl;
-			return -1;
-	}
+    
+    /*write to the mesh*/
+    // stringstream ss;
+	// ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
+    // cout<<ss.str()<<endl;
+    // if (!currentFrame.writeMesh(vertices,ss.str())){
+	// 		cout << "Failed to write mesh!\nCheck file path!" << endl;
+	// 		return -1;
+	// }
     
     
     return 0;
