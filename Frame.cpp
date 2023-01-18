@@ -4,23 +4,37 @@
 
 //constructor of Frame
 Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics, Eigen::Matrix4f &depthExtrinsics, 
-         Eigen::Matrix4f &trajectory, unsigned int width,unsigned int height, float edgeThreshold )
+         Eigen::Matrix4f &trajectory, unsigned int width,unsigned int height, float edgeThreshold , bool filtered)
 : _width(width), _height(height), _depthIntrinsics(depthIntrinsics), _depthExtrinsics(depthExtrinsics), _edgeThreshold(edgeThreshold),_trajectory(trajectory)
 {
-    _depthMap = vector<float>(_width * _height);
     _colorMap = vector<Vector4uc>(_width * _height);
-    for (unsigned int i = 0 ; i < _width * _height; i++){
-         _depthMap[i] = depthMap[i];
+    _depthMap = vector<float>(_width * _height);
+    if(!filtered){
 
-         // color is stored as RGBX in row major (4 byte values per pixel) 
-         // so the size of colorMap is 4 * width * height
-         // we convert it to 4 unsigned char type
-         _colorMap[i] = Vector4uc(colorMap[4*i], colorMap[4*i+1], colorMap[4*i+2], colorMap[4*i+3]);
+        for (unsigned int i = 0 ; i < _width * _height; i++){
+             _depthMap[i] = depthMap[i];
+            /* color is stored as RGBX in row major (4 byte values per pixel) 
+           so the size of colorMap is 4 * width * height
+           we convert it to 4 unsigned char type */
+             _colorMap[i] = Vector4uc(colorMap[4*i], colorMap[4*i+1], colorMap[4*i+2], colorMap[4*i+3]);
+        }
+
+    }else{
+         /* depth map without bilateralFilter */ 
+        vector<float> unfileredMap = vector<float>(_width * _height);
+        for (unsigned int i = 0 ; i < _width * _height; i++){
+             unfileredMap[i] = depthMap[i];
+             _colorMap[i] = Vector4uc(colorMap[4*i], colorMap[4*i+1], colorMap[4*i+2], colorMap[4*i+3]);
+        }
+
+  
+        applyBilateralFilter( unfileredMap,  _depthMap, _width, _height);   
+        
     }
+    
 
-    vector<float> filteredDepthMap =  vector<float>(_width * _height);
-    applyBilateralFilter( _depthMap,  filteredDepthMap);
 
+   
 
 }
 
@@ -200,12 +214,11 @@ Matrix3f Frame::getDepthIntrinsics(){
     return _depthIntrinsics;
 }
 
-void Frame::applyBilateralFilter(vector<float>& originalDepth, vector<float>& outputDepth){
+void Frame::applyBilateralFilter(vector<float>& originalDepth, vector<float>& outputDepth, unsigned int width, unsigned int height){
     
-    const Mat cvOriginalDepth(_width, _height,  CV_32F, reinterpret_cast<void*>(originalDepth.data()));
+    const Mat cvOriginalDepth(height, width,  CV_32F, reinterpret_cast<void*>(originalDepth.data()));
 
-    Mat cvOutputDepth(_width, _height, CV_32F, reinterpret_cast<void*>(outputDepth.data()));
-
+    Mat cvOutputDepth(height, width, CV_32F, reinterpret_cast<void*>(outputDepth.data()));
 
     constexpr float BIG_NEGATIVE_NUMBER = -10000.0;
 
@@ -224,7 +237,6 @@ void Frame::applyBilateralFilter(vector<float>& originalDepth, vector<float>& ou
         }
     }
 
-    
 }
 
 bool ValidFace(vector<Vertex>& vertices, unsigned int v1, unsigned int v2, unsigned int v3, float edgeThreshold){
@@ -324,4 +336,57 @@ bool Frame::writeMesh(vector<Vertex>& vertices, const string& filename){
 
     return true;
 
+}
+
+void Frame::buildDepthPyramid(vector<float>& originalMap, vector<vector<float>>& outputMap, unsigned int maxLevel){
+
+    const Mat cvOriginalMap(_width, _height,  CV_32F, reinterpret_cast<void*>(originalMap.data()));
+
+    vector<Mat> gpyramid;
+
+    buildPyramid(cvOriginalMap, gpyramid, maxLevel);
+
+    /* convert mat to vector */
+    for(size_t i = 0; i < gpyramid.size(); i++){
+        vector<float> arr;
+        
+        if (gpyramid[i].isContinuous()) {
+            arr.assign((float*)gpyramid[i].data, (float*)gpyramid[i].data + gpyramid[i].total()*gpyramid[i].channels());
+        }else{
+            for (int i = 0; i < gpyramid[i].rows; ++i) {
+              arr.insert(arr.end(), gpyramid[i].ptr<float>(i), gpyramid[i].ptr<float>(i) + gpyramid[i].cols*gpyramid[i].channels());
+            }
+        }
+
+        vector<float> filteredArr = vector<float>(gpyramid[i].cols*gpyramid[i].rows);
+        applyBilateralFilter(arr, filteredArr, gpyramid[i].cols, gpyramid[i].rows);
+        outputMap.push_back(filteredArr);
+    }
+
+}
+
+void Frame::buildColorPyramid(vector<Vector4uc>& originalMap, vector<vector<Vector4uc>>& outputMap, unsigned int maxLevel){
+    //todo
+
+}
+
+
+Matrix3f Frame::getLevelCameraIntrinstics(unsigned int level){
+    if(level == 0){
+        return _depthIntrinsics;
+    }
+
+    Matrix3f levelCameraIntrinstics{_depthIntrinsics};
+
+    float scale = pow(0.5, level);
+
+    levelCameraIntrinstics(0,0) *= scale; // focal x
+    levelCameraIntrinstics(1,1) *= scale; // focal y
+
+    levelCameraIntrinstics(0,1) *= scale;  //axis skew (usually 0)
+
+    levelCameraIntrinstics(0,2) *= scale; //principal point mx
+    levelCameraIntrinstics(1,2) *= scale; // principal point my
+
+    return levelCameraIntrinstics;
 }

@@ -24,8 +24,8 @@ int execute(){
 		return -1;
     }
     
-    sensor.ProcessNextFrame();
-
+    while(sensor.ProcessNextFrame()){
+    
     Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
     Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics();
     Matrix4f trajectory = sensor.GetTrajectory();
@@ -36,17 +36,25 @@ int execute(){
     unsigned int width  = sensor.GetDepthImageWidth();
     unsigned int height = sensor.GetDepthImageHeight();
     float edgeThreshold = 10;
+    bool filtered = true;
 
 
-    Frame previousFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold);
 
-    /** check if the constructor works **/
-    // std::cout<< sensor.GetDepth()[27876]<<std::endl;
-    // std::cout<< currentFrame.getDepthMap()[27876]<<std::endl;
+
+    Frame previousFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered);
+
+    vector<float> depthVectorMap = previousFrame.getDepthMap();
+    unsigned int levelSize = 5;
+    vector<vector<float>> depthPyramid ;
+
+    
+    previousFrame.buildDepthPyramid(depthVectorMap, depthPyramid, levelSize);
+
 
     vector<Vertex> vertices = previousFrame.getVertices();
 
     
+    /*write to the mesh*/
     stringstream ss;
 	ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
     cout << ss.str() << endl;
@@ -121,13 +129,7 @@ int main(){
     int res;
     res = execute();
 
-    // Vector4f v1 = Vector4f(4.0,2.0,7.0,1.0);
-    // Vector4f v2 = Vector4f(3.0,5.0,4.0,1.0);
-    // Vector3f v1_ = v1.head<3>();
-    // Vector3f v2_ = v2.head<3>();
-    // Vector3f normal = v1_.cross(v2_);
-    // std::cout<<normal<<std::endl;
-    // std::cout<<normal.normalized()<<std::endl;
+    
 
-    return 0;
+    return res;
 }
