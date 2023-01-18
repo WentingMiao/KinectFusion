@@ -25,6 +25,7 @@ FreeImage, Eigen
     Create the ```build/``` folder and in this case, we can create an out-of-source build.
     
 3. Libs folder
+
 	Create a ```Libs/``` folder to store packages.
 	
 # Run the project:

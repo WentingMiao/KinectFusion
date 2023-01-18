@@ -14,7 +14,7 @@ int execute(){
     std::string filenameIn =  "../Data/rgbd_dataset_freiburg1_xyz/";
 
     //path to the output 
-    std::string filenameBaseOut = "./results/mesh_";
+    std::string filenameBaseOut = "../results/mesh_";
     std::cout << "Initialize virtual sensor..." << std::endl;
 
     VirtualSensor sensor;
@@ -44,9 +44,30 @@ int execute(){
     // std::cout<< sensor.GetDepth()[27876]<<std::endl;
     // std::cout<< currentFrame.getDepthMap()[27876]<<std::endl;
 
-    // std::vector<Vertex> vertices = currentFrame.getVertices();
+    vector<Vertex> vertices = previousFrame.getVertices();
+
     
-    // std::cout << currentFrame.getHeight() << std::endl;
+    stringstream ss;
+	ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
+    cout << ss.str() << endl;
+    if (!previousFrame.writeMesh(vertices,ss.str())){
+			cout << "Failed to write mesh!\nCheck file path!" << endl;
+			return -1;
+    }
+
+
+    sensor.ProcessNextFrame();
+    Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold);
+    vertices = currentFrame.getVertices();
+    stringstream ss_1;
+	ss_1 << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
+    cout << ss_1.str() << endl;
+    if (!previousFrame.writeMesh(vertices,ss_1.str())){
+			cout << "Failed to write mesh!\nCheck file path!" << endl;
+			return -1;
+    }    
+    
+    // std::cout << previousFrame.getHeight() << std::endl;
 
     Eigen::Matrix4f cur_pose = Matrix4f::Identity();
     const float distance_threshold = 0.8f;
@@ -57,24 +78,38 @@ int execute(){
 
 
     // Initialization completed
-    for (unsigned int i = 1; i < 3; ++i){
-        std::cout << "Current is Frame: " << i << std::endl;
-        sensor.ProcessNextFrame();
-        Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold);
 
-        Pose pose;
-        pose.pose_estimation(currentFrame.getVertices(),
-                             previousFrame.getVertices(),
-                             depthIntrinsics,
-                             distance_threshold,
-                             angle_threshold,
-                             num_iteration,
-                             width,
-                             height,
-                             pyramid_level,
-                             cur_pose);
-        previousFrame = currentFrame;
-    }
+    // for (unsigned int i = 1; i < 2; ++i){
+    //     std::cout << "Current is Frame: " << i << std::endl;
+    //     sensor.ProcessNextFrame();
+    //     Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold);
+
+    //     Pose pose;
+    //     pose.pose_estimation(currentFrame.getVertices(),
+    //                          previousFrame.getVertices(),
+    //                          depthIntrinsics,
+    //                          distance_threshold,
+    //                          angle_threshold,
+    //                          num_iteration,
+    //                          width,
+    //                          height,
+    //                          pyramid_level,
+    //                          cur_pose);
+
+    //     previousFrame = currentFrame;
+    //     vertices = previousFrame.getVertices();
+    //     for(auto it = vertices.begin(); it != vertices.end(); ++it){
+    //         it->position = pose.Vector3fToVector4f(pose.TransformToVertex(pose.Vector4fToVector3f(it->position),cur_pose));
+    //     }
+    //     stringstream ss;
+    //     ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
+    //     cout << ss.str() << endl;        
+    //     if (!currentFrame.writeMesh(vertices,ss.str())){
+    //     cout << "Failed to write mesh!\nCheck file path!" << endl;
+    //     return -1;
+    //     }       
+    // }
+	
 
 
     return 0;   
@@ -86,7 +121,6 @@ int main(){
     int res;
     res = execute();
 
-    
     // Vector4f v1 = Vector4f(4.0,2.0,7.0,1.0);
     // Vector4f v2 = Vector4f(3.0,5.0,4.0,1.0);
     // Vector3f v1_ = v1.head<3>();

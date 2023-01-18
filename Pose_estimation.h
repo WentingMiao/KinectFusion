@@ -4,6 +4,7 @@
 #define POSE_ESTIMATION_H
 
 #include "Frame.h"
+#include <Eigen/Dense>
 #include <math.h>
 #include <execution>
 #include <mutex>
@@ -39,7 +40,7 @@ bool pose_estimation(const std::vector<Vertex>& frame_data,
                      const unsigned int& width,
                      const unsigned int& height,
                      const unsigned int& pyramid_level,
-                     const Eigen::Matrix4f& cur_pose = Matrix4f::Identity()
+                     Eigen::Matrix4f& cur_pose
 );
 
 VectorXf estimatePosePointToPlane(const std::vector<Vector3f>& sourcePoints, 
@@ -47,6 +48,12 @@ VectorXf estimatePosePointToPlane(const std::vector<Vector3f>& sourcePoints,
                                   const std::vector<Vector3f>& targetNormals,
                                   double &error);
 
+
+Vector3f Vector4fToVector3f(Vector4f vertex);
+
+Vector4f Vector3fToVector4f(Vector3f vertex);
+
+Vector3f TransformToVertex(Vector3f vertex, Eigen::Matrix4f Transformation);
 private:
 
 /* 

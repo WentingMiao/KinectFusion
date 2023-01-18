@@ -7,6 +7,7 @@ project(${PROJECT_NAME})
 
 
 set(LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Libs CACHE PATH "Path to lib folder")
+#set(OpenCV_DIR ${LIBRARY_DIR}/build)
 
 # Use pre-compiled libraries on Windows
 if(WIN32)
@@ -24,6 +25,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 #find required packages 
 find_package(Eigen3 REQUIRED)
+find_package(OpenCV REQUIRED)
 
 set(HEADERS 
     Eigen.h
@@ -42,9 +44,14 @@ set(SOURCES
 
 
 link_directories(${FreeImage_LIBRARY_DIR})
+link_directories(${OpenCV_INCLUDE_DIR})
+include_directories( ${OpenCV_INCLUDE_DIRS})
+
+
+
 add_executable(KinectFusion ${HEADERS} ${SOURCES})
-target_include_directories(KinectFusion PUBLIC ${EIGEN3_INCLUDE_DIR} ${FreeImage_INCLUDE_DIR})
-target_link_libraries(KinectFusion general Eigen3::Eigen freeimage tbb) 
+target_include_directories(KinectFusion PUBLIC ${EIGEN3_INCLUDE_DIR} ${FreeImage_INCLUDE_DIR} ${OpenCV_INCLUDE_DIR})
+target_link_libraries(KinectFusion general Eigen3::Eigen freeimage ${OpenCV_LIBS} tbb)
 
 
 

@@ -21,7 +21,7 @@ bool Pose::pose_estimation(const std::vector<Vertex>& frame_data,
                      const unsigned int& width,
                      const unsigned int& height,
                      const unsigned int& pyramid_level,
-                     const Eigen::Matrix4f& cur_pose
+                     Eigen::Matrix4f& cur_pose
 )
 {
     float fX =    Intrinsics(0, 0);
@@ -54,10 +54,10 @@ bool Pose::pose_estimation(const std::vector<Vertex>& frame_data,
 
             // current_vertex: in camera space of k
             // previous_vertex: this vertex in camera space of k-1
-            Vector3f current_vertex;
-            current_vertex.x() = frame_data[i].position.x();
-            current_vertex.y() = frame_data[i].position.y();
-            current_vertex.z() = frame_data[i].position.z();
+            Vector3f current_vertex = Vector4fToVector3f(frame_data[i].position);
+            // current_vertex.x() = frame_data[i].position.x();
+            // current_vertex.y() = frame_data[i].position.y();
+            // current_vertex.z() = frame_data[i].position.z();
             Vector3f current_normal = frame_data[i].normal;
             // get vertex in previous global vertex  V_g_k-1
 
@@ -90,17 +90,17 @@ bool Pose::pose_estimation(const std::vector<Vertex>& frame_data,
 
             int cur_idx = m.first;
             int prv_idx = m.second;
-            Vector3f current_vertex;
-            current_vertex.x() = frame_data[cur_idx].position.x();
-            current_vertex.y() = frame_data[cur_idx].position.y();
-            current_vertex.z() = frame_data[cur_idx].position.z();
+            Vector3f current_vertex = Vector4fToVector3f(frame_data[cur_idx].position);
+            // current_vertex.x() = frame_data[cur_idx].position.x();
+            // current_vertex.y() = frame_data[cur_idx].position.y();
+            // current_vertex.z() = frame_data[cur_idx].position.z();
             Vector3f current_global_vertex = current_global_rotation * current_vertex + current_global_translation;
             
-            Vector3f previous_global_vertex;
+            Vector3f previous_global_vertex = Vector4fToVector3f(model_data[prv_idx].position);
             
-            previous_global_vertex.x() = model_data[prv_idx].position.x();
-            previous_global_vertex.y() = model_data[prv_idx].position.y();
-            previous_global_vertex.z() = model_data[prv_idx].position.z();
+            // previous_global_vertex.x() = model_data[prv_idx].position.x();
+            // previous_global_vertex.y() = model_data[prv_idx].position.y();
+            // previous_global_vertex.z() = model_data[prv_idx].position.z();
             Vector3f previous_global_normal = model_data[prv_idx].normal;
 
         
@@ -136,54 +136,115 @@ bool Pose::pose_estimation(const std::vector<Vertex>& frame_data,
 
 
         // prepare data for ICP
+        // for parallel we consider caculate each point pair
 
-        // std::vector<Vector3f> sourcePoints;
-        // std::vector<Vector3f> targetPoints;
-        // std::vector<Vector3f> targetNormal;
+        // Eigen::Vector3f s; // sourcePoint
+        // Eigen::Vector3f d; // targetPoint
+        // Eigen::Vector3f n;// targetNormal
+        const size_t N = selected_matches.size();
+        MatrixXf A = MatrixXf::Zero(6, 6);
+        Eigen::VectorXf b= VectorXf::Zero(6);
 
-        // // gather matched point-pair
-        // for (int j = 0; j < nPoints; ++j) {
-        //     const auto& match = matches[j];
-        //     if (match.idx >= 0) {
-        //         sourcePoints.push_back(frame_data[j].position);
-        //         targetPoints.push_back(model_data[j].position);
-        //         targetNormal.push_back(model_data[j].normal);
-        //     }
+        // this part can parr
+        int i = 0;
+        for(auto it = selected_matches.begin(); it != selected_matches.end(); ++it){
+            auto source_idx = it->first;
+            auto target_idx = it->second;            
+            // Note that sourcePoint always in camera space
+            Eigen::Vector3f s  = current_global_rotation * Vector4fToVector3f(frame_data[source_idx].position) + current_global_translation;
+            Eigen::Vector3f d  = Vector4fToVector3f(model_data[target_idx].position);
+            Eigen::Vector3f n  = model_data[target_idx].normal;
+
+            // cout << "s is: " << s << endl << "d is: " << d << endl << "n is " << n << endl;
+
+        //     Matrix<float, 1, 6> point2plane; 
+        //     point2plane << n(2)*s(1)-n(1)*s(2), n(0)*s(2)-n(2)*s(0), n(1)*s(0)-n(0)*s(1), n(0), n(1), n(2);
+        //     A.block<1,6>(i,0) = point2plane;
+        //     // part of point2plane, copied from paper
+        //     b(i) = (n(0)*d(0) + n(1)*d(1) + n(2)*d(2) - n(0)*s(0) - n(1)*s(1) - n(2)*s(2));
+        //     // ICP incremental caculate
+        //     ++i;
         // }
+            MatrixXf  G = MatrixXf::Zero(3,6);
+            G(0, 0) = 0;
+            G(1, 1) = 0;
+            G(2, 2) = 0;
+            G(0, 1) = -s[2];
+            G(0, 2) = s[1];
+            G(1, 2) = -s[0];
+            G(1, 0) = s[2];
+            G(2, 0) = -s[1];
+            G(2, 1) = s[0];
+            G(0, 3) = 1;
+            G(1, 4) = 1;
+            G(2, 5) = 1;
 
-        // // step 3: solve Ax = b -> get increment value
-        // auto pose_increment = estimatePosePointToPlane(sourcePoints, targetPoints, targetNormal);
+            Eigen::MatrixXf tempA = MatrixXf::Zero(6, 6);
+            Eigen::VectorXf tempbias = VectorXf::Zero(6);
+            tempA = G.transpose() * n * n.transpose() * G;
+            tempbias = G.transpose() * n * n.transpose() * (d - s);
 
-        // float alpha = pose_increment(0), beta = pose_increment(1), gamma = pose_increment(2);
+            A = A + tempA;
+            b = b + tempbias;    
+        }    
 
-        // Matrix3f rotation_incremental = AngleAxisf(alpha, Vector3f::UnitX()).toRotationMatrix() *
-        //                                 AngleAxisf(beta,  Vector3f::UnitY()).toRotationMatrix() *
-        //                                 AngleAxisf(gamma, Vector3f::UnitZ()).toRotationMatrix();    
+        VectorXf pose_increment;
+        pose_increment = A.ldlt().solve(b);
 
-        // Vector3f translation_incremental = pose_increment.tail(3);        
+        float alpha = pose_increment(0), beta = pose_increment(1), gamma = pose_increment(2);
 
-        // // step 4: caculate current pose after increment
-        // // R_w2 = R_12 * R_w1
-        // // t_w2 = R_12 * tw1 + t12
-        // current_global_translation = rotation_incremental * current_global_translation + translation_incremental;
-        // current_global_rotation = rotation_incremental * current_global_rotation;
+        Matrix3f rotation_incremental = AngleAxisf(alpha, Vector3f::UnitX()).toRotationMatrix() *
+                                        AngleAxisf(beta,  Vector3f::UnitY()).toRotationMatrix() *
+                                        AngleAxisf(gamma, Vector3f::UnitZ()).toRotationMatrix();    
 
+        Vector3f translation_incremental = pose_increment.tail(3); 
 
-        // total_time += double(clock() - end) / CLOCKS_PER_SEC;
-        // std::cout << "Optimization iteration done: " << it << std::endl;
+        current_global_translation = rotation_incremental * current_global_translation + translation_incremental;
+        current_global_rotation = rotation_incremental * current_global_rotation;
+        if(DEBUG){
+        cout << "incremental is: " << endl << translation_incremental << endl; 
+        cout << "current rotation is :" << endl << current_global_rotation << endl;
+        cout << "current translation is: " << endl << current_global_translation << endl;  
+        }
     }
     
     // iteration finished
 
     // step 5: return new pose
-    // cur_pose.block(0, 0, 3, 3) = current_global_rotation;
-    // cur_pose.block(0, 3, 3, 1) = current_global_translation;
+    cur_pose.block<3,3>(0,0) = current_global_rotation;
+    cur_pose.block<3,1>(0,3) = current_global_translation;
+
+    if(DEBUG){
+    std::cout << "Optimization iteration done " << std::endl;
+    }    
     
     return true;
 }
 
 
-// VectorXd estimatePosePointToPlane(const std::vector<Vector3f>& sourcePoints, 
+Vector3f Pose::Vector4fToVector3f(Vector4f vertex){
+    Vector3f output;
+    output.x() = vertex.x();
+    output.y() = vertex.y();
+    output.z() = vertex.z();
+    return output;
+}
+
+Vector4f Pose::Vector3fToVector4f(Vector3f vertex){
+    Vector4f output;
+    output.x() = vertex.x();
+    output.y() = vertex.y();
+    output.z() = vertex.z();
+    output.w() = 1.0;
+    return output;
+}
+
+Vector3f Pose::TransformToVertex(Vector3f vertex, Eigen::Matrix4f Transformation)
+{
+    return Transformation.block(0, 0, 3, 3) * vertex + Transformation.block(0,3,3,1);
+
+}
+// VectorXf estimatePosePointToPlane(const std::vector<Vector3f>& sourcePoints, 
 //                                   const std::vector<Vector3f>& targetPoints, 
 //                                   const std::vector<Vector3f>& targetNormals
 //                                   ) {
@@ -215,3 +276,5 @@ bool Pose::pose_estimation(const std::vector<Vertex>& frame_data,
 //     return x;
 
 // }
+
+// util for transfrom from Vector4f to Vector3f

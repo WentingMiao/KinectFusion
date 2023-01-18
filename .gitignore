@@ -3,3 +3,4 @@ build/**
 Data/**
 Content/**
 .vscode/**
+results/**

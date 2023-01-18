@@ -2,15 +2,13 @@
 
 
 
-
-
 //constructor of Frame
 Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics, Eigen::Matrix4f &depthExtrinsics, 
          Eigen::Matrix4f &trajectory, unsigned int width,unsigned int height, float edgeThreshold )
 : _width(width), _height(height), _depthIntrinsics(depthIntrinsics), _depthExtrinsics(depthExtrinsics), _edgeThreshold(edgeThreshold),_trajectory(trajectory)
 {
-    _depthMap = std::vector<float>(_width * _height);
-    _colorMap = std::vector<Vector4uc>(_width * _height);
+    _depthMap = vector<float>(_width * _height);
+    _colorMap = vector<Vector4uc>(_width * _height);
     for (unsigned int i = 0 ; i < _width * _height; i++){
          _depthMap[i] = depthMap[i];
 
@@ -20,12 +18,16 @@ Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics,
          _colorMap[i] = Vector4uc(colorMap[4*i], colorMap[4*i+1], colorMap[4*i+2], colorMap[4*i+3]);
     }
 
+    vector<float> filteredDepthMap =  vector<float>(_width * _height);
+    applyBilateralFilter( _depthMap,  filteredDepthMap);
+
+
 }
 
 
-std::vector<Eigen::Vector4f> Frame::getCameraPoints(){
+vector<Eigen::Vector4f> Frame::getCameraPoints(){
     
-    std::vector<Eigen::Vector4f> points( _width*_height );
+    vector<Eigen::Vector4f> points( _width*_height );
 
     float fX = _depthIntrinsics(0, 0);
 	float fY = _depthIntrinsics(1, 1);
@@ -61,10 +63,24 @@ Vector3f cross(Vector4f v1, Vector4f v2){
     Vector3f normal = v1_.cross(v2_);
     return normal;
 }
+/*setter function*/
+void Frame::setFilterSize(int size){
+    _dValue = size;
+}
 
-std::vector<Vertex>  Frame::getVertices(){
+void Frame::setSigmaColor(double sigmaColor){
+    _sigmaColor = sigmaColor;
+}
 
-    std::vector<Vertex> vertices(_width * _height);
+void Frame::setSigmaSpace(double sigmaSpace){
+    _sigmaSpace = sigmaSpace;
+}
+
+/*getter function */
+
+vector<Vertex>  Frame::getVertices(){
+
+    vector<Vertex> vertices(_width * _height);
 
     /* get the 3d position and color */
     float fX = _depthIntrinsics(0, 0);
@@ -159,15 +175,11 @@ std::vector<Vertex>  Frame::getVertices(){
 
 }
 
-
-
-
-
-std::vector<float> Frame::getDepthMap(){
+vector<float> Frame::getDepthMap(){
     return _depthMap;
 }
 
-std::vector<Vector4uc> Frame::getColorMap(){
+vector<Vector4uc> Frame::getColorMap(){
     return _colorMap;
 }
 
@@ -188,3 +200,128 @@ Matrix3f Frame::getDepthIntrinsics(){
     return _depthIntrinsics;
 }
 
+void Frame::applyBilateralFilter(vector<float>& originalDepth, vector<float>& outputDepth){
+    
+    const Mat cvOriginalDepth(_width, _height,  CV_32F, reinterpret_cast<void*>(originalDepth.data()));
+
+    Mat cvOutputDepth(_width, _height, CV_32F, reinterpret_cast<void*>(outputDepth.data()));
+
+
+    constexpr float BIG_NEGATIVE_NUMBER = -10000.0;
+
+    
+    for (size_t i = 0; i < originalDepth.size(); i++) {
+        if (originalDepth[i] == MINF) {
+            originalDepth[i] = BIG_NEGATIVE_NUMBER;
+        }
+    }
+
+    bilateralFilter(cvOriginalDepth, cvOutputDepth, _dValue, _sigmaColor, _sigmaSpace);
+    for (size_t i = 0; i < originalDepth.size(); i++) {
+        if (originalDepth[i] == BIG_NEGATIVE_NUMBER) {
+            originalDepth[i] = MINF;
+            outputDepth[i] = MINF;
+        }
+    }
+
+    
+}
+
+bool ValidFace(vector<Vertex>& vertices, unsigned int v1, unsigned int v2, unsigned int v3, float edgeThreshold){
+	if(vertices[v1].position(0)== MINF || vertices[v2].position(0)== MINF ||vertices[v3].position(0)== MINF) return false;
+	if(((vertices[v1].position - vertices[v2].position).norm() < edgeThreshold) && 
+		((vertices[v1].position - vertices[v3].position).norm() < edgeThreshold) &&
+		((vertices[v2].position - vertices[ v3].position).norm() < edgeThreshold)){
+			return true;
+		}
+	else{
+		return false;
+	}
+}
+
+bool Frame::writeMesh(vector<Vertex>& vertices, const string& filename){
+
+    float edgeThreshold = 0.01f; // 1cm
+
+    unsigned int nVertices = _width * _height;
+
+    unsigned nFaces = 0;	//Determine number of valid faces
+
+    
+	vector<Vector3i> faces;
+
+	
+	for(int row=0; row < _height-1; row++){
+		for(int col=0; col < _width-1; col++){
+			int id1 = row * _width + col;
+			int id2 = row * _width + col + 1;
+			int id3 = (row + 1) * _width +col;
+			int id4 = (row + 1) * _width +col + 1;
+
+			if(ValidFace(vertices,id1,id2,id3,edgeThreshold)){
+				faces.push_back(Vector3i(id1,id2,id3));
+	 			nFaces++;
+			}
+
+			if(ValidFace(vertices, id2, id3, id4, edgeThreshold)){
+				faces.push_back(Vector3i(id2,id3,id4));
+	 			nFaces++;
+			}
+		}
+	}
+
+
+    // Write off file
+	ofstream outFile(filename);
+
+    if (!outFile.is_open()) return false;
+	
+	
+    outFile << "COFF" << std::endl;
+
+	outFile << "# numVertices numFaces numEdges" << std::endl;
+
+	outFile << nVertices << " " << nFaces << " 0" << std::endl;
+
+    outFile << "# list of vertices" << std::endl;
+
+	outFile << "# X Y Z R G B A" << std::endl;
+
+    //save vertices
+    for(auto idx = 0; idx < _height * _width ; ++idx){
+		if(vertices[idx].position.x() == MINF){
+			outFile << 0.0 << " " << 0.0 << " " << 0.0 << " "
+                     << 255 << " " << 255 << " " << 255 << " " << 255 << endl;
+		}
+		else{
+			outFile << vertices[idx].position.x() 				  << " " 
+					<< vertices[idx].position.y() 				  << " " 
+					<< vertices[idx].position.z() 				  << " " 
+					<< (unsigned int)vertices[idx].color[0] 	  << " "
+					<< (unsigned int)vertices[idx].color[1] 	  << " "
+					<< (unsigned int)vertices[idx].color[2] 	  << " "
+					<< (unsigned int)vertices[idx].color[3] 	  
+					<< endl;
+
+					
+		}
+	}
+
+    outFile << "# list of faces" << std::endl;
+	outFile << "# nVerticesPerFace idx0 idx1 idx2 ..." << std::endl;
+
+    //save valid faces
+    for(int i = 0; i<faces.size();i++){
+		outFile << 3 <<" "<< faces[i][0]<<" "<<faces[i][1] <<" "<<faces[i][2]<<std::endl;
+	}
+
+    // close file
+	outFile.close();
+
+	return true;
+
+
+
+    return true;
+
+}
