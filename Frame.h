@@ -26,12 +26,11 @@ class Frame{
          Eigen::Matrix4f &trajectory, unsigned int width,unsigned int height, float edgeThreshold = 2);
 
 
-        void applyBilateralFilter(vector<float>& originalDepth, vector<float>& outputDepth);
+        void applyBilateralFilter(vector<float>& originalDepth, vector<float>& outputDepth, unsigned int width, unsigned int height);
 
         void buildDepthPyramid(vector<float>& originalMap, vector<vector<float>>& outputMap,unsigned int maxLevel);
         void buildColorPyramid(vector<Vector4uc>& originalMap, vector<vector<Vector4uc>>& outputMap, unsigned int maxLevel);
 
-        
 
         bool writeMesh(vector<Vertex>& vectices, const string& filename);
 

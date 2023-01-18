@@ -53,13 +53,13 @@ int execute(){
     
     
     /*write to the mesh*/
-    // stringstream ss;
-	// ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
-    // cout<<ss.str()<<endl;
-    // if (!currentFrame.writeMesh(vertices,ss.str())){
-	// 		cout << "Failed to write mesh!\nCheck file path!" << endl;
-	// 		return -1;
-	// }
+    stringstream ss;
+	ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
+    cout<<ss.str()<<endl;
+    if (!currentFrame.writeMesh(vertices,ss.str())){
+			cout << "Failed to write mesh!\nCheck file path!" << endl;
+			return -1;
+	}
     
     
     return 0;
@@ -71,8 +71,6 @@ int main(){
     int res;
     
     res = execute();
-
-    
 
     return res;
 }

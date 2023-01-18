@@ -19,7 +19,7 @@ Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics,
     }
 
     vector<float> filteredDepthMap =  vector<float>(_width * _height);
-    applyBilateralFilter( _depthMap,  filteredDepthMap);
+    applyBilateralFilter( _depthMap,  filteredDepthMap, _width, _height);
 
 
 }
@@ -200,12 +200,11 @@ Matrix3f Frame::getDepthIntrinsics(){
     return _depthIntrinsics;
 }
 
-void Frame::applyBilateralFilter(vector<float>& originalDepth, vector<float>& outputDepth){
+void Frame::applyBilateralFilter(vector<float>& originalDepth, vector<float>& outputDepth, unsigned int width, unsigned int height){
     
-    const Mat cvOriginalDepth(_width, _height,  CV_32F, reinterpret_cast<void*>(originalDepth.data()));
+    const Mat cvOriginalDepth(height, width,  CV_32F, reinterpret_cast<void*>(originalDepth.data()));
 
-    Mat cvOutputDepth(_width, _height, CV_32F, reinterpret_cast<void*>(outputDepth.data()));
-
+    Mat cvOutputDepth(height, width, CV_32F, reinterpret_cast<void*>(outputDepth.data()));
 
     constexpr float BIG_NEGATIVE_NUMBER = -10000.0;
 
@@ -224,7 +223,6 @@ void Frame::applyBilateralFilter(vector<float>& originalDepth, vector<float>& ou
         }
     }
 
-    
 }
 
 bool ValidFace(vector<Vertex>& vertices, unsigned int v1, unsigned int v2, unsigned int v3, float edgeThreshold){
@@ -337,6 +335,7 @@ void Frame::buildDepthPyramid(vector<float>& originalMap, vector<vector<float>>&
     /* convert mat to vector */
     for(size_t i = 0; i < gpyramid.size(); i++){
         vector<float> arr;
+        
         if (gpyramid[i].isContinuous()) {
             arr.assign((float*)gpyramid[i].data, (float*)gpyramid[i].data + gpyramid[i].total()*gpyramid[i].channels());
         }else{
@@ -344,8 +343,13 @@ void Frame::buildDepthPyramid(vector<float>& originalMap, vector<vector<float>>&
               arr.insert(arr.end(), gpyramid[i].ptr<float>(i), gpyramid[i].ptr<float>(i) + gpyramid[i].cols*gpyramid[i].channels());
             }
         }
-        outputMap.push_back(arr);
+
+        vector<float> filteredArr = vector<float>(gpyramid[i].cols*gpyramid[i].rows);
+        applyBilateralFilter(arr, filteredArr, gpyramid[i].cols, gpyramid[i].rows);
+        outputMap.push_back(filteredArr);
     }
+
+
 
 }
 
