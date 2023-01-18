@@ -1,12 +1,12 @@
+
 #include <iostream>
 #include <fstream>
 #include <array>
 
-
 #include "VirtualSensor.h"
 #include "Eigen.h"
 #include "Frame.h"
-
+#include "Pose_estimation.h"
 
 int execute(){
 
@@ -38,25 +38,55 @@ int execute(){
     float edgeThreshold = 10;
 
 
-    Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold);
+    Frame previousFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold);
 
     /** check if the constructor works **/
     // std::cout<< sensor.GetDepth()[27876]<<std::endl;
     // std::cout<< currentFrame.getDepthMap()[27876]<<std::endl;
 
-    std::vector<Vertex> vertices = currentFrame.getVertices();
+    // std::vector<Vertex> vertices = currentFrame.getVertices();
     
-    
-    return 0;
+    // std::cout << currentFrame.getHeight() << std::endl;
+
+    Eigen::Matrix4f cur_pose = Matrix4f::Identity();
+    const float distance_threshold = 0.8f;
+    const float angle_threshold = 60.0f;
+    const int num_iteration = 5;
+    const int pyramid_level = 5;
+    //TODO all about Initialization see above
+
+
+    // Initialization completed
+    for (unsigned int i = 1; i < 3; ++i){
+        std::cout << "Current is Frame: " << i << std::endl;
+        sensor.ProcessNextFrame();
+        Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold);
+
+        Pose pose;
+        pose.pose_estimation(currentFrame.getVertices(),
+                             previousFrame.getVertices(),
+                             depthIntrinsics,
+                             distance_threshold,
+                             angle_threshold,
+                             num_iteration,
+                             width,
+                             height,
+                             pyramid_level,
+                             cur_pose);
+        previousFrame = currentFrame;
+    }
+
+
+    return 0;   
 }
 
 
 int main(){
     
     int res;
-    
     res = execute();
 
+    
     // Vector4f v1 = Vector4f(4.0,2.0,7.0,1.0);
     // Vector4f v2 = Vector4f(3.0,5.0,4.0,1.0);
     // Vector3f v1_ = v1.head<3>();

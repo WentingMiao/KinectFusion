@@ -30,12 +30,14 @@ set(HEADERS
     FreeImageHelper.h
     VirtualSensor.h
     Frame.h
+    Pose_estimation.h
 )
 
 set(SOURCES
     main.cpp
     FreeImageHelper.cpp
     Frame.cpp
+    Pose_estimation.cpp
 )
 
 
