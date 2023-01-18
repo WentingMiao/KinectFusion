@@ -4,23 +4,37 @@
 
 //constructor of Frame
 Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics, Eigen::Matrix4f &depthExtrinsics, 
-         Eigen::Matrix4f &trajectory, unsigned int width,unsigned int height, float edgeThreshold )
+         Eigen::Matrix4f &trajectory, unsigned int width,unsigned int height, float edgeThreshold , bool filtered)
 : _width(width), _height(height), _depthIntrinsics(depthIntrinsics), _depthExtrinsics(depthExtrinsics), _edgeThreshold(edgeThreshold),_trajectory(trajectory)
 {
-    _depthMap = vector<float>(_width * _height);
     _colorMap = vector<Vector4uc>(_width * _height);
-    for (unsigned int i = 0 ; i < _width * _height; i++){
-         _depthMap[i] = depthMap[i];
+    _depthMap = vector<float>(_width * _height);
+    if(!filtered){
 
-         // color is stored as RGBX in row major (4 byte values per pixel) 
-         // so the size of colorMap is 4 * width * height
-         // we convert it to 4 unsigned char type
-         _colorMap[i] = Vector4uc(colorMap[4*i], colorMap[4*i+1], colorMap[4*i+2], colorMap[4*i+3]);
+        for (unsigned int i = 0 ; i < _width * _height; i++){
+             _depthMap[i] = depthMap[i];
+            /* color is stored as RGBX in row major (4 byte values per pixel) 
+           so the size of colorMap is 4 * width * height
+           we convert it to 4 unsigned char type */
+             _colorMap[i] = Vector4uc(colorMap[4*i], colorMap[4*i+1], colorMap[4*i+2], colorMap[4*i+3]);
+        }
+
+    }else{
+         /* depth map without bilateralFilter */ 
+        vector<float> unfileredMap = vector<float>(_width * _height);
+        for (unsigned int i = 0 ; i < _width * _height; i++){
+             unfileredMap[i] = depthMap[i];
+             _colorMap[i] = Vector4uc(colorMap[4*i], colorMap[4*i+1], colorMap[4*i+2], colorMap[4*i+3]);
+        }
+
+  
+        applyBilateralFilter( unfileredMap,  _depthMap, _width, _height);   
+        
     }
+    
 
-    vector<float> filteredDepthMap =  vector<float>(_width * _height);
-    applyBilateralFilter( _depthMap,  filteredDepthMap, _width, _height);
 
+   
 
 }
 
@@ -348,8 +362,6 @@ void Frame::buildDepthPyramid(vector<float>& originalMap, vector<vector<float>>&
         applyBilateralFilter(arr, filteredArr, gpyramid[i].cols, gpyramid[i].rows);
         outputMap.push_back(filteredArr);
     }
-
-
 
 }
 

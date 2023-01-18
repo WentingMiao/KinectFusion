@@ -24,8 +24,8 @@ int execute(){
 		return -1;
     }
     
-    sensor.ProcessNextFrame();
-
+    while(sensor.ProcessNextFrame()){
+    
     Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
     Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics();
     Matrix4f trajectory = sensor.GetTrajectory();
@@ -36,18 +36,20 @@ int execute(){
     unsigned int width  = sensor.GetDepthImageWidth();
     unsigned int height = sensor.GetDepthImageHeight();
     float edgeThreshold = 10;
+    bool filtered = true;
 
 
-    Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold);
+
+
+    Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered);
 
     vector<float> depthVectorMap = currentFrame.getDepthMap();
     unsigned int levelSize = 5;
     vector<vector<float>> depthPyramid ;
 
+    
     currentFrame.buildDepthPyramid(depthVectorMap, depthPyramid, levelSize);
-    for(int i=0;i<depthPyramid.size();i++){
-            cout<<i<<" "<< depthPyramid[i].size() <<endl;
-    }
+
 
     vector<Vertex> vertices = currentFrame.getVertices();
     
@@ -60,8 +62,9 @@ int execute(){
 			cout << "Failed to write mesh!\nCheck file path!" << endl;
 			return -1;
 	}
+    }
     
-    
+
     return 0;
 }
 
