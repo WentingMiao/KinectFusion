@@ -20,7 +20,7 @@ if(WIN32)
 endif(WIN32)
 
 # Set C++ flags
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 20)
 
 #find required packages 
 find_package(Eigen3 REQUIRED)
@@ -44,7 +44,7 @@ set(SOURCES
 link_directories(${FreeImage_LIBRARY_DIR})
 add_executable(KinectFusion ${HEADERS} ${SOURCES})
 target_include_directories(KinectFusion PUBLIC ${EIGEN3_INCLUDE_DIR} ${FreeImage_INCLUDE_DIR})
-target_link_libraries(KinectFusion general Eigen3::Eigen freeimage)
+target_link_libraries(KinectFusion general Eigen3::Eigen freeimage tbb) 
 
 
 

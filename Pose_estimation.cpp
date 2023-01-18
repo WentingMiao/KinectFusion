@@ -1,6 +1,7 @@
 #include "Pose_estimation.h"
 
 #define PI acos(-1)
+std::mutex mut;
 /**
  * Convention: 
  * we focus on Rotation R and Translation t
@@ -8,7 +9,8 @@
  * R_w1, t_w1 means parameters in world coordinate of frame 1
  * R_c2, t_c2 means parametersin camera coordinate of frame 2
  */
-double total_time = 0;
+
+
 
 bool Pose::pose_estimation(const std::vector<Vertex>& frame_data,
                      const std::vector<Vertex>& model_data,
@@ -41,13 +43,11 @@ bool Pose::pose_estimation(const std::vector<Vertex>& frame_data,
 
     for(int it = 0; it < num_iteration; ++it){
         // step 2.1: data association
-        // we store all corresponde point pair in match?
-        // TODO we should directly process corresponde point to Ax-b = 0
-
         clock_t begin = clock();
 
         const unsigned nPoints = frame_data.size();
-        std::vector<Match> matches(nPoints);
+        std::unordered_map<int, int> matches;
+        std::unordered_map<int, int> selected_matches;
         int count = 0;
 
         for(int i = 0; i < nPoints; ++i){
@@ -59,19 +59,17 @@ bool Pose::pose_estimation(const std::vector<Vertex>& frame_data,
             current_vertex.y() = frame_data[i].position.y();
             current_vertex.z() = frame_data[i].position.z();
             Vector3f current_normal = frame_data[i].normal;
-            // std::cout << frame_data[i].position << std::endl;
             // get vertex in previous global vertex  V_g_k-1
+
+            // avoid redundant caculation to speed up 
             if (!isnan(current_normal[0]) && !isnan(current_normal[1]) && !isnan(current_normal[2]) &&
                 !isnan(current_vertex[0]) && !isnan(current_vertex[0]) && !isnan(current_vertex[0]) &&
                 current_normal[0] != MINF && current_normal[2] != MINF && current_normal[2] != MINF &&
                 current_vertex[0] != MINF && current_vertex[2] != MINF && current_vertex[2] != MINF){
                 Eigen::Vector3f current_global_vertex = current_global_rotation * current_vertex + current_global_translation;
-                Eigen::Vector3f current_global_normal = current_global_rotation * current_normal;
                 // transfrom to camera coordinate v_k-1
                 Eigen::Vector3f previous_vertex = previous_global_rotation_inverse * (current_global_vertex - previous_global_translation);            
-            // make sure normal exist
-            
-                
+ 
                 // back-project to pixel v_k-1
                 Eigen::Vector2i point;
                 point.x() = std::floor(previous_vertex.x() * fX / previous_vertex.z() + cX);
@@ -80,51 +78,62 @@ bool Pose::pose_estimation(const std::vector<Vertex>& frame_data,
                 // check if pixel still in image
                 if(point.x() >= 0 && point.y() >= 0 && point.x() < width && point.y() < height && previous_vertex.z() >= 0){
                     //cacluate v
-                    
                     unsigned int previous_idx = point.y() * width + point.x();
                     // i means point in frame k
-                    // idx means point in frame k-1
-                    matches[i].idx = previous_idx;
-                    ++count;
-                    // source
-                    Eigen::Vector3f previous_global_vertex;
-                    previous_global_vertex.x() = model_data[previous_idx].position.x();
-                    previous_global_vertex.y() = model_data[previous_idx].position.y();
-                    previous_global_vertex.z() = model_data[previous_idx].position.z();
-                    Eigen::Vector3f previous_global_normal = model_data[previous_idx].normal;
-
-                    // distance check
-                    const float distance = (previous_global_vertex - current_global_vertex).norm();
-                    // std::cout << "distance: " << distance <<std::endl;
-                    if (distance < distance_threshold){
-                        //caculate norm
-                        // std::cout << "entry distance" << std::endl;
-                        //! normal and vertex of frame_data is in camera space
-                        //! normal and vertex of model_data is in world space
-                        Vector3f current_global_normal = current_global_rotation * frame_data[i].normal;
-                        Vector3f previous_global_normal = model_data[i].normal;
-                        // const float normal_angle = abs(current_global_normal.dot(previous_global_normal));
-                        auto normal_angle = acos(previous_global_normal.dot(current_global_normal) / 
-                        (previous_global_normal.norm() * current_global_normal.norm()));
-                        normal_angle = normal_angle * 180/PI;
-                        if(normal_angle > angle_threshold){
-                            matches[i].idx = -1;
-                            --count;
-                        }
-                    }
+                    // previous means point in frame k-1
+                    matches.insert(std::pair<int, int>(i, previous_idx));
                 }
-                else{
-                    matches[i].idx = -1;
-                }
-            } 
+            }
         }
 
+        std::for_each(std::execution::par_unseq, matches.begin(), matches.end(), [&](const auto& m) {
+
+            int cur_idx = m.first;
+            int prv_idx = m.second;
+            Vector3f current_vertex;
+            current_vertex.x() = frame_data[cur_idx].position.x();
+            current_vertex.y() = frame_data[cur_idx].position.y();
+            current_vertex.z() = frame_data[cur_idx].position.z();
+            Vector3f current_global_vertex = current_global_rotation * current_vertex + current_global_translation;
+            
+            Vector3f previous_global_vertex;
+            
+            previous_global_vertex.x() = model_data[prv_idx].position.x();
+            previous_global_vertex.y() = model_data[prv_idx].position.y();
+            previous_global_vertex.z() = model_data[prv_idx].position.z();
+            Vector3f previous_global_normal = model_data[prv_idx].normal;
+
+        
+            const float distance = (previous_global_vertex - current_global_vertex).norm();
+            if (distance < distance_threshold){
+                //caculate norm
+                //! normal and vertex of frame_data is in camera space
+                //! normal and vertex of model_data is in world space
+                Vector3f current_global_normal = current_global_rotation * frame_data[cur_idx].normal;                
+
+                auto normal_angle = acos(previous_global_normal.dot(current_global_normal) / 
+                (previous_global_normal.norm() * current_global_normal.norm()));
+                normal_angle = normal_angle * 180/PI;
+                if(normal_angle < angle_threshold){
+                    std::lock_guard<std::mutex> guard(mut);
+                    selected_matches[cur_idx] = prv_idx;
+                }
+            }
+        });
+
         // for evaluation
+
         clock_t end = clock();
         double elapsedSecs = double(end - begin) / CLOCKS_PER_SEC;
-        std::cout << "Data association completed in " << elapsedSecs << " seconds. " << "with " << count << " match pairs" << std::endl;
+        if(DEBUG){
+        std::cout << "Data association completed in " << elapsedSecs << " seconds. " << std::endl;
+        std::cout << "find match pairs: " << matches.size() << ", after detection: " << selected_matches.size() << std::endl;
+        }
+
+
 
         //step 2.2 ICP
+
 
         // prepare data for ICP
 

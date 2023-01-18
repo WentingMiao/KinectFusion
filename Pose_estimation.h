@@ -5,16 +5,15 @@
 
 #include "Frame.h"
 #include <math.h>
+#include <execution>
+#include <mutex>
+#include <iterator>
+#include <vector>
 
-struct Match {
-	int idx;
-	float weight;
-};
-
+constexpr bool DEBUG{true};
 
 class Pose{
 public:
-
 
 Pose() = default;
 
