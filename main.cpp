@@ -10,6 +10,7 @@
 
 int execute(){
 
+
     //path to the data 
     std::string filenameIn =  "../Data/rgbd_dataset_freiburg1_xyz/";
 
@@ -24,8 +25,8 @@ int execute(){
 		return -1;
     }
     
-    while(sensor.ProcessNextFrame()){
-    
+    sensor.ProcessNextFrame();
+
     Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
     Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics();
     Matrix4f trajectory = sensor.GetTrajectory();
@@ -39,49 +40,83 @@ int execute(){
     bool filtered = true;
 
 
+    Eigen::Matrix4f cur_pose = Matrix4f::Identity();
 
+    const float distance_threshold = 0.8f;
+    const float angle_threshold = 60.0f;
+    const int num_iteration = 1;
+    const int pyramid_level = 5;
 
     Frame previousFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered);
 
     vector<float> depthVectorMap = previousFrame.getDepthMap();
-    unsigned int levelSize = 5;
-    vector<vector<float>> depthPyramid ;
 
-    
-    previousFrame.buildDepthPyramid(depthVectorMap, depthPyramid, levelSize);
+    vector<vector<float>> depthPyramid;
 
+    previousFrame.buildDepthPyramid(depthVectorMap, depthPyramid, pyramid_level);
 
     vector<Vertex> vertices = previousFrame.getVertices();
-
+    
     
     /*write to the mesh*/
     stringstream ss;
-	ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
-    cout << ss.str() << endl;
+    ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
+    cout<<ss.str()<<endl;
     if (!previousFrame.writeMesh(vertices,ss.str())){
-			cout << "Failed to write mesh!\nCheck file path!" << endl;
-			return -1;
+            cout << "Failed to write mesh!\nCheck file path!" << endl;
+            return -1;
     }
+    // Initialization completed (frame 0 finished)
 
+    // frame 1 start
+    while(sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 2){
+        Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
+        Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics();
+        Matrix4f trajectory = sensor.GetTrajectory();
 
-    sensor.ProcessNextFrame();
-    Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold);
-    vertices = currentFrame.getVertices();
-    stringstream ss_1;
-	ss_1 << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
-    cout << ss_1.str() << endl;
-    if (!previousFrame.writeMesh(vertices,ss_1.str())){
-			cout << "Failed to write mesh!\nCheck file path!" << endl;
-			return -1;
-    }    
+        BYTE* colorMap = &sensor.GetColorRGBX()[0];
+        float* depthMap = &sensor.GetDepth()[0];
+
+        unsigned int width  = sensor.GetDepthImageWidth();
+        unsigned int height = sensor.GetDepthImageHeight();
+        Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered);   
+
+        Pose pose;
+        pose.pose_estimation(currentFrame.getVertices(),
+                             previousFrame.getVertices(),
+                             depthIntrinsics,
+                             distance_threshold,
+                             angle_threshold,
+                             num_iteration,
+                             width,
+                             height,
+                             pyramid_level,
+                             cur_pose);            
+    
+        //get source vertex map (frame k)
+        vector<Vertex> vertices = currentFrame.getVertices(); 
+
+        // // applied transform
+        for(auto it = vertices.begin(); it != vertices.end(); ++it){
+            it->position = pose.Vector3fToVector4f(pose.TransformToVertex(pose.Vector4fToVector3f(it->position),cur_pose));
+        }        
+        
+        /*write to the mesh*/
+        stringstream ss;
+        ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
+        cout<<ss.str()<<endl;
+        if (!currentFrame.writeMesh(vertices,ss.str())){
+                cout << "Failed to write mesh!\nCheck file path!" << endl;
+                return -1;
+        }
+
+        previousFrame = currentFrame;
+
+    }
     
     // std::cout << previousFrame.getHeight() << std::endl;
 
-    Eigen::Matrix4f cur_pose = Matrix4f::Identity();
-    const float distance_threshold = 0.8f;
-    const float angle_threshold = 60.0f;
-    const int num_iteration = 5;
-    const int pyramid_level = 5;
+
     //TODO all about Initialization see above
 
 

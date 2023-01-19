@@ -10,6 +10,7 @@
 #include <mutex>
 #include <iterator>
 #include <vector>
+#include <stdexcept>
 
 constexpr bool DEBUG{true};
 
@@ -54,6 +55,9 @@ Vector3f Vector4fToVector3f(Vector4f vertex);
 Vector4f Vector3fToVector4f(Vector3f vertex);
 
 Vector3f TransformToVertex(Vector3f vertex, Eigen::Matrix4f Transformation);
+
+Vector3f TransformToNormal(Vector3f normal, Eigen::Matrix4f Transformation);
+
 private:
 
 /* 
