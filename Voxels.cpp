@@ -14,15 +14,29 @@ unsigned VoxelArray::location2idx(Vector4f location) {
     float z = std::floor(location(2) / location(3) / _grid_len);
     return x * _size[0] + y * _size[1] + z;
 }
-
-void VoxelArray::SetVal(Vector4f location, float weight, float sdf, Vector4uc color) {
+void VoxelArray::SetWeightVal(Vector4f location, float weight) {
     unsigned idx = location2idx(location);
     voxel[idx].weight = weight;
+}
+void VoxelArray::SetSDFVal(Vector4f location, float sdf) {
+    unsigned idx = location2idx(location);
     voxel[idx].sdf = sdf;
+}
+void VoxelArray::SetColorVal(Vector4f location, Vector4uc color) {
+    unsigned idx = location2idx(location);
     voxel[idx].color = color;
 }
 
 float VoxelArray::GetWeightVal(Vector4f location) {
     unsigned idx = location2idx(location);
     return voxel[idx].weight;
+}
+
+void VoxelArray::GetSDFVal(Vector4f location) {
+    unsigned idx = location2idx(location);
+    return voxel[idx].sdf;
+}
+void VoxelArray::GetColorVal(Vector4f location) {
+    unsigned idx = location2idx(location);
+    return voxel[idx].color;
 }
