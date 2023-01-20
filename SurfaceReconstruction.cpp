@@ -17,16 +17,16 @@ bool Fusion::SurfaceReconstruction(
     double truncationDistance) 
 {
     //step1: Initialize
-    auto pose = _pose;  //current frame pose Íâ²Î
+    auto pose = _pose;  //current frame pose 
     auto width = cur_Frame->getWidth(); //volume width
     auto height = cur_Frame->getHeight(); //volume height
     Matrix3f Intrinsics = cur_Frame->getDepthIntrinsics(); //camera intrinsics matrix of shape (3, 3)
     //Matrix4f depthExtrinsics = cur_Frame->getDepthExtrinsics(); //// depth extrinsives
 
-    //Ö®Ç°¶¨ÒåµÄvolumeÀà °ÑÏàÍ¬µÄ¹¦ÄÜÔÚvoxelÊµÏÖÒ»ÏÂ»òÕßÖ±½Ó´«½øÀ´¶¼ĞĞ
+    //ä¹‹å‰å®šä¹‰çš„volumeç±» æŠŠç›¸åŒçš„åŠŸèƒ½åœ¨voxelå®ç°ä¸€ä¸‹æˆ–è€…ç›´æ¥ä¼ è¿›æ¥éƒ½è¡Œ
     auto voxelData = volume->getVoxelData(); //save voxel data
-    auto voxelScale = volume->getVoxelSize(); //voxel scale Ã¿¸öÌåËØ´óĞ¡
-    auto volumeSize = volume->getVolumeSize(); //volume size ÌåËØ¿é´óĞ¡
+    auto voxelScale = volume->getVoxelSize(); //voxel scale æ¯ä¸ªä½“ç´ å¤§å°
+    auto volumeSize = volume->getVolumeSize(); //volume size ä½“ç´ å—å¤§å°
 
  
 
@@ -75,7 +75,7 @@ bool Fusion::SurfaceReconstruction(
                     //get TSDF and weight already stored in the current model
                     size_t voxel_index = x + (y * volumeSize.x()) + (z * volumeSize.x() * volumeSize.y());
 
-                    //Õâ¼¸¾äĞèÒª¸ù¾İÏÖÔÚµÄtsdfÀàĞŞ¸Ä
+                    //è¿™å‡ å¥éœ€è¦æ ¹æ®ç°åœ¨çš„tsdfç±»ä¿®æ”¹
                     const double old_tsdf = volume->getVoxelData()[voxel_index].tsdf;
                     const double old_weight = volume->getVoxelData()[voxel_index].weight;
 
@@ -102,7 +102,7 @@ bool Fusion::SurfaceReconstruction(
 
 
 
-//ÓĞµÄ¹¦ÄÜÓĞÖØºÏ¿ÉÒÔºÏÒ»ÏÂ
+//æœ‰çš„åŠŸèƒ½æœ‰é‡åˆå¯ä»¥åˆä¸€ä¸‹
 Eigen::Vector3d Fusion::grid2world(int &x, int &y, int &z, float voxelScale)
 {
     const Eigen::Vector3d position(
@@ -116,7 +116,7 @@ Eigen::Vector3d Fusion::grid2world(int &x, int &y, int &z, float voxelScale)
 Eigen::Vector2i Fusion::project2Camera(Eigen::Vector3d &cam_position, Eigen::Matrix3f& Intrinsics)
 {
     Eigen::Vector2i project_pix(
-        cam_position.x() / cam_position.z() * Intrinsics(o, o) + Intrinsics(0, 2),
+        cam_position.x() / cam_position.z() * Intrinsics(0, 0) + Intrinsics(0, 2),
         cam_position.y() / cam_position.z() * Intrinsics(1, 1) + Intrinsics(1, 2));
 
     return project_pix;
@@ -124,7 +124,7 @@ Eigen::Vector2i Fusion::project2Camera(Eigen::Vector3d &cam_position, Eigen::Mat
 
 float Fusion::cal_Lamda(Eigen::Vector2i &uv, Eigen::Matrix3f &Intrinsics)
 {
-    //ÄÚ²Î
+    //å†…å‚
     float fovX = Intrinsics(0, 0);
     float fovY = Intrinsics(1, 1);
     float cX = Intrinsics(0, 2);
