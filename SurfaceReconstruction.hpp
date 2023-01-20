@@ -10,7 +10,7 @@ public:
         * @description : Loop over every world point and calculate a truncated signed distance value (TSDF), along with a weight
         * @param cur_Frame: current frame
         * @param volume: The container which save the data
-        * @param cur_pose: The camera pose of shape £¨4£¬ 4)
+        * @param cur_pose: The camera pose of shape Â£Â¨4Â£Â¬ 4)
         * @param truncationDistance:
         * 
     */
@@ -20,7 +20,7 @@ public:
                                double truncationDistance);
 
     private:
-        Eigen::Vector3d grid2world(int& x, int& y, int& z, float volumeSize);
+        Eigen::Vector3d grid2world(int& x, int& y, int& z, float voxelSize);
         Eigen::Vector2i project2Camera(Eigen::Vector3d& cam_position, Eigen::Matrix3f& Intrinsics);
         float cal_Lamda(Eigen::Vector2i& uv, Eigen::Matrix3f& Intrinsics);
         float cal_SDF(const float&lambda, Eigen::Vector3d& camera_pos, float depth);
