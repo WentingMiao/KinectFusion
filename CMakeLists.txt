@@ -33,6 +33,8 @@ set(HEADERS
     VirtualSensor.h
     Frame.h
     Pose_estimation.h
+    SimpleMesh.h 
+    PointCloud.h     
 )
 
 set(SOURCES

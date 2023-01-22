@@ -45,13 +45,14 @@ int execute(){
     const float distance_threshold = 0.8f;
     const float angle_threshold = 60.0f;
     const int num_iteration = 1;
-    const int pyramid_level = 5;
+    const int pyramid_level = 3;
 
     Frame previousFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered);
 
     vector<float> depthVectorMap = previousFrame.getDepthMap();
 
     vector<vector<float>> depthPyramid;
+    // level 0 is large
 
     previousFrame.buildDepthPyramid(depthVectorMap, depthPyramid, pyramid_level);
 
@@ -69,7 +70,7 @@ int execute(){
     // Initialization completed (frame 0 finished)
 
     // frame 1 start
-    while(sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 2){
+    while(sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 1){
         Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
         Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics();
         Matrix4f trajectory = sensor.GetTrajectory();
@@ -79,7 +80,9 @@ int execute(){
 
         unsigned int width  = sensor.GetDepthImageWidth();
         unsigned int height = sensor.GetDepthImageHeight();
+        
         Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered);   
+        currentFrame.buildDepthPyramid(depthVectorMap, depthPyramid, pyramid_level);
 
         Pose pose;
         pose.pose_estimation(currentFrame.getVertices(),
@@ -96,7 +99,6 @@ int execute(){
         //get source vertex map (frame k)
         vector<Vertex> vertices = currentFrame.getVertices(); 
 
-        // // applied transform
         for(auto it = vertices.begin(); it != vertices.end(); ++it){
             it->position = pose.Vector3fToVector4f(pose.TransformToVertex(pose.Vector4fToVector3f(it->position),cur_pose));
         }        
@@ -114,47 +116,6 @@ int execute(){
 
     }
     
-    // std::cout << previousFrame.getHeight() << std::endl;
-
-
-    //TODO all about Initialization see above
-
-
-    // Initialization completed
-
-    // for (unsigned int i = 1; i < 2; ++i){
-    //     std::cout << "Current is Frame: " << i << std::endl;
-    //     sensor.ProcessNextFrame();
-    //     Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold);
-
-    //     Pose pose;
-    //     pose.pose_estimation(currentFrame.getVertices(),
-    //                          previousFrame.getVertices(),
-    //                          depthIntrinsics,
-    //                          distance_threshold,
-    //                          angle_threshold,
-    //                          num_iteration,
-    //                          width,
-    //                          height,
-    //                          pyramid_level,
-    //                          cur_pose);
-
-    //     previousFrame = currentFrame;
-    //     vertices = previousFrame.getVertices();
-    //     for(auto it = vertices.begin(); it != vertices.end(); ++it){
-    //         it->position = pose.Vector3fToVector4f(pose.TransformToVertex(pose.Vector4fToVector3f(it->position),cur_pose));
-    //     }
-    //     stringstream ss;
-    //     ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
-    //     cout << ss.str() << endl;        
-    //     if (!currentFrame.writeMesh(vertices,ss.str())){
-    //     cout << "Failed to write mesh!\nCheck file path!" << endl;
-    //     return -1;
-    //     }       
-    // }
-	
-
-
     return 0;   
 }
 

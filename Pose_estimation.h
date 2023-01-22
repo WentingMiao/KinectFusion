@@ -50,6 +50,25 @@ VectorXf estimatePosePointToPlane(const std::vector<Vector3f>& sourcePoints,
                                   double &error);
 
 
+void data_association(const std::vector<Vertex>& frame_data,
+                      const Matrix3f &Intrinsics,
+                      const unsigned int& width,
+                      const unsigned int& height,
+                      std::unordered_map<int, int>& matches);
+
+void outlier_check( const std::vector<Vertex>& frame_data,
+                    const std::vector<Vertex>& model_data,
+                    std::unordered_map<int, int>& matches,
+                    std::unordered_map<int, int>& selected_matches,
+                    const float& distance_threshold,
+                    const float& angle_threshold);
+
+void incremental_caculation(const std::vector<Vertex>& frame_data,
+                            const std::vector<Vertex>& model_data,
+                            std::unordered_map<int, int>& selected_matches,
+                            int& iteration_index);
+
+
 Vector3f Vector4fToVector3f(Vector4f vertex);
 
 Vector4f Vector3fToVector4f(Vector3f vertex);
@@ -60,17 +79,14 @@ Vector3f TransformToNormal(Vector3f normal, Eigen::Matrix4f Transformation);
 
 private:
 
-/* 
-pose of current frame.
-only after execute pose_estimation() then get "true" current pose
-*/
-Eigen::Matrix4f m_current_pose;
 
 /* 
-vector fo all poses
-which trajectory can generated later
-    */
-std::vector<Eigen::Matrix4f> m_poses; 
+pose of current frame.
+*/
+
+Eigen::Matrix4f m_current_pose;
+
+Eigen::Matrix4f m_previous_pose;
 
 // std::vector<Vertex> m_frame_data;
 
