@@ -3,6 +3,7 @@
 #include "Eigen.h"
 #include "VirtualSensor.h"
 #include "opencv2/opencv.hpp"
+
 using namespace std;
 using namespace cv;
 
@@ -45,7 +46,7 @@ class Frame{
 
         /* getter function */
         vector<Eigen::Vector4f> getCameraPoints();// get points of camera cooridinate
-        vector<Vertex> getVertices(); // get vertices of the frame
+        vector<Vertex> getVertices(bool icp_state); // get vertices of the frame
         vector<float> getDepthMap(); //get depthmap of the frame
         vector<Vector4uc> getColorMap(); //get the colormap of the frame, type is Vector4uc 
 

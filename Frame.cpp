@@ -1,7 +1,5 @@
 #include "Frame.h"
 
-
-
 //constructor of Frame
 Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics, Eigen::Matrix4f &depthExtrinsics, 
          Eigen::Matrix4f &trajectory, unsigned int width,unsigned int height, float edgeThreshold , bool filtered)
@@ -92,7 +90,7 @@ void Frame::setSigmaSpace(double sigmaSpace){
 
 /*getter function */
 
-vector<Vertex>  Frame::getVertices(){
+vector<Vertex>  Frame::getVertices(bool icp_state){
 
     vector<Vertex> vertices(_width * _height);
 
@@ -120,14 +118,19 @@ vector<Vertex>  Frame::getVertices(){
 
                 // Back-projection to camera space.
 				float x = z*(u-cX)/fX; 
-				float y = z*(v-cX)/fY; 
+				float y = z*(v-cY)/fY; 
+                //! Huge Error
                 
                 //get the point in camera coordinate
 				point_c = Vector4f(x, y, z, 1.0);
 
                 //get the point in global coordinate/ world coordinate
-                point_w =  _trajectory.inverse() * _depthExtrinsics.inverse() * point_c;
-                
+                if(icp_state){
+                    point_w =  _depthExtrinsics.inverse() * point_c;          
+                }
+                else{
+                    point_w =  _trajectory.inverse() * _depthExtrinsics.inverse() * point_c;
+                }
 
             }
             vertices[idx].color = color;

@@ -8,6 +8,9 @@
 #include "Frame.h"
 #include "Pose_estimation.h"
 
+#define USE_ICP 1
+// 1 if use icp to optimize pose
+
 int execute(){
 
 
@@ -42,9 +45,9 @@ int execute(){
 
     Eigen::Matrix4f cur_pose = Matrix4f::Identity();
 
-    const float distance_threshold = 0.8f;
-    const float angle_threshold = 60.0f;
-    const int num_iteration = 1;
+    const float distance_threshold = 0.1f;
+    const float angle_threshold = 20.0f;
+    const int num_iteration = 10;
     const int pyramid_level = 3;
 
     Frame previousFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered);
@@ -56,7 +59,7 @@ int execute(){
 
     previousFrame.buildDepthPyramid(depthVectorMap, depthPyramid, pyramid_level);
 
-    vector<Vertex> vertices = previousFrame.getVertices();
+    vector<Vertex> vertices = previousFrame.getVertices(USE_ICP);
     
     
     /*write to the mesh*/
@@ -70,7 +73,7 @@ int execute(){
     // Initialization completed (frame 0 finished)
 
     // frame 1 start
-    while(sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 1){
+    while(sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 30){
         Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
         Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics();
         Matrix4f trajectory = sensor.GetTrajectory();
@@ -82,11 +85,12 @@ int execute(){
         unsigned int height = sensor.GetDepthImageHeight();
         
         Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered);   
-        currentFrame.buildDepthPyramid(depthVectorMap, depthPyramid, pyramid_level);
+
+        // currentFrame.buildDepthPyramid(depthVectorMap, depthPyramid, pyramid_level);
 
         Pose pose;
-        pose.pose_estimation(currentFrame.getVertices(),
-                             previousFrame.getVertices(),
+        pose.pose_estimation(currentFrame.getVertices(USE_ICP),
+                             previousFrame.getVertices(USE_ICP),
                              depthIntrinsics,
                              distance_threshold,
                              angle_threshold,
@@ -97,7 +101,7 @@ int execute(){
                              cur_pose);            
     
         //get source vertex map (frame k)
-        vector<Vertex> vertices = currentFrame.getVertices(); 
+        vector<Vertex> vertices = currentFrame.getVertices(USE_ICP); 
 
         for(auto it = vertices.begin(); it != vertices.end(); ++it){
             it->position = pose.Vector3fToVector4f(pose.TransformToVertex(pose.Vector4fToVector3f(it->position),cur_pose));

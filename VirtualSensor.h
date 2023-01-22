@@ -16,7 +16,7 @@ class VirtualSensor
 {
 public:
 
-	VirtualSensor() : m_currentIdx(-1), m_increment(1)
+	VirtualSensor() : m_currentIdx(-1), m_increment(10)
 	{
 
 	}

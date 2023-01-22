@@ -24,7 +24,6 @@ bool Pose::pose_estimation(const std::vector<Vertex>& frame_data,
                      Eigen::Matrix4f& cur_pose
 )
 {
-
     // step 1: Initialize pose 
     m_current_pose = cur_pose;
     m_previous_pose = m_current_pose;
@@ -113,7 +112,21 @@ void Pose::data_association(const std::vector<Vertex>& frame_data,
                 // i means point in frame k
                 // previous means point in frame k-1
                 matches.insert(std::pair<int, int>(i, previous_idx));
-                // std:: cout << i << " , " << previous_idx << endl;
+
+                if(DEBUG){
+                    // std::cout << "fX is: " << fX << " fY is: " << fY << endl;
+                    // std::cout << "index in k: " << i << endl;
+                    // // 当前帧的坐标是？
+                    // int tmp_x = i % width;
+                    // int tmp_y = i / width;
+                    
+                    // std::cout << "idex in k but with x and y:" << tmp_x << ", " << tmp_y << endl;                          
+                    // std::cout << "current_vertex in (k camera space): " << endl << current_vertex << endl;
+
+                    // std::cout << "current_camera_vertex in k-1 (camera space) : " << endl << current_vertex << endl;
+                    // std::cout << "point: " << point.x() << ", " << point.y() << endl;      
+                    // std::cout << "index in k-1: " << previous_idx << endl << endl;
+                }
             }
         }
     }
