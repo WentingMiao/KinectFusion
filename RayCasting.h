@@ -15,22 +15,11 @@ Ray casting module:
 
     use:
     RayCasting cast{size_t width, size_t height, float focal_len, std::shared_ptr<VoxelInterface> ptrtsdf};
-    std::vector<Vertex> vertices = cast.Surface_prediction();
-
-Involved data:
-    Camera pose
-    TSDF
-    Frame -> size(width, height); focal length
-    Color frame / depth frame: std::vector<Vertex>
+    std::vector<Vertex> vertices = cast.SurfacePrediction();
 
     TODO:
     1. visualize tsdf using K3d
     2. visualizaion of generated image
-
-FIXME
-    1. implement interplocation:
-        why diller implement trilinear interpolation?
-        ray casting interpolation normal
 */
 
 
@@ -44,11 +33,12 @@ class RayCasting
 public:
     inline RayCasting(size_t width, size_t height, float focal_len,
                       const Eigen::Matrix4f& Pose, VoxelArray& tsdf_arr) : _width(width), _height(height), _Pose(Pose), tsdf{tsdf_arr} {}
-    std::vector<Vertex> Surface_prediction(); // get intersection location
+    std::vector<Vertex> SurfacePrediction(); // get intersection location
+    void computeNormal(std::vector<Vertex>& vertices);
 private:
     Vertex CastPixel(int x, int y);                                   // obtain the vertex corresponding to pixel
     Vector4f Pixel2World(unsigned int x, unsigned int y);             // transform pixel location to world location
-    Vertex Interpolation(const Vector4f &loc1, const Vector4f &loc2); // linear interpolation to obtain color and location of vertex
+    Vertex interpolation(const Vector4f &loc1, const Vector4f &loc2); // linear interpolation to obtain color and location of vertex
     struct Ray
     {
         inline Ray(const Vector4f &origin, const Vector4f &direction, float step_size, float begin_distance = 0)

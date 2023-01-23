@@ -1,6 +1,6 @@
 #include "RayCasting.h"
 
-std::vector<Vertex> RayCasting::Surface_prediction()
+std::vector<Vertex> RayCasting::SurfacePrediction()
 {
     std::vector<Vertex> vertices(_width * _height);
     for (int i = 0; i < _width; ++i)
@@ -8,7 +8,40 @@ std::vector<Vertex> RayCasting::Surface_prediction()
         {
             vertices[_width * i + j] = CastPixel(i, j);
         }
+    computeNormal(vertices);
     return vertices;
+}
+
+void RayCasting::computeNormal(std::vector<Vertex> &vertices)
+{
+    for (unsigned int row = 1; row < _height - 1; row++)
+    {
+        for (unsigned int col = 1; col < _width - 1; col++)
+        {
+            int idx = row * _width + col;
+
+            // 1. search for points in the neighbourhood
+            Vector4f point = vertices[idx].position;
+            Vector4f leftPoint = vertices[idx - 1].position;
+            Vector4f rightPoint = vertices[idx + 1].position;
+            Vector4f upperPoint = vertices[idx - _width].position;
+            Vector4f lowerPoint = vertices[idx + _width].position;
+
+            // 2. compute principal component
+            Vector4f du = vertices[idx + 1].position - vertices[idx - 1].position;
+            Vector4f dv = vertices[idx + _width].position - vertices[idx - _width].position;
+
+            // we set normal to invalid when vertex are too far away from its neigbours
+            if (du.norm() < 10 || dv.norm() < 10)
+            {
+                // getting the norm by cross product of two vectors made up of neighbours
+                Vector3f normal = cross(du, dv);
+                normal = normal.normalized();
+                // 3. normalize the norm
+                vertices[idx].normal = normal;
+            }
+        }
+    }
 }
 
 Vector4f RayCasting::Pixel2World(unsigned int x, unsigned int y)
@@ -34,56 +67,55 @@ Vertex RayCasting::CastPixel(int x, int y)
     Vector4f lastLocation;
     Vector4f currLocation;
     while (tsdf.isValidLocation(r.getLocation())) // todo: is valid distance
-    //!
     {
         lastLocation = currLocation;
         currLocation = r.getLocation();
         if (tsdf.GetSDFVal(lastLocation) * tsdf.GetSDFVal(currLocation) <= 0) // surface
         {
-            return Interpolation(lastLocation, currLocation);
+            return interpolation(lastLocation, currLocation);
         }
         else
             r.step();
     }
     return Vertex{};
 }
-Vector4uc uc_subtraction(const Vector4uc& a, const Vector4uc& b) {
+Vector4uc uc_subtraction(const Vector4uc &a, const Vector4uc &b)
+{
     Vector4uc tmp{a(0) - b(0), a(1) - b(1), a(2) - b(2), a(3) - b(3)};
     return tmp;
 }
 
-Vector4uc uc_addition(const Vector4uc& a, const Vector4uc& b) {
-    Vector4uc tmp{a(0) + b(0), a(1) + b(1), a(2) + b(2), a(3) + b(3)};
+Vector4uc uc_addition(const Vector4uc &a, const Vector4uc &b)
+{
+    Vector4uc tmp{static_cast<u_char>(a(0) + b(0)), static_cast<u_char>(a(1) + b(1)), static_cast<u_char>(a(2) + b(2)), static_cast<u_char>(a(3) + b(3))};
     return tmp;
 }
 
-Vector4uc uc_elementwise_mult(float a, const Vector4uc& b) {
+Vector4uc uc_elementwise_mult(float a, const Vector4uc &b)
+{
     Vector4uc tmp{static_cast<u_char>(a * b(0)), static_cast<u_char>(a * b(1)), static_cast<u_char>(a * b(2)), static_cast<u_char>(a * b(3))};
     return tmp;
 }
 
-Vertex RayCasting::Interpolation(const Vector4f &loc1, const Vector4f &loc2)
+Vertex RayCasting::interpolation(const Vector4f &loc1, const Vector4f &loc2)
 {
-    // -f(x2) / f(x1) - f(x2) = x2x* / x2x1
-    // factor := -f(x2) / f(x1) - f(x2)
-    // x* = x2 + factor * x2x1
+    /*
+    Linear interpolation to approximate surface location
+        -f(x2) / f(x1) - f(x2) = x2x* / x2x1
+        factor := -f(x2) / f(x1) - f(x2)
+        x* = x2 + factor * x2x1
+    */
+
     float factor = (tsdf.GetSDFVal(loc2) / (tsdf.GetSDFVal(loc2) - tsdf.GetSDFVal(loc1)));
     Vector4f est_location = loc2 + factor * (loc1 - loc2);
     Vector4uc color = uc_addition(
-        tsdf.GetColorVal(loc2), 
+        tsdf.GetColorVal(loc2),
         uc_elementwise_mult(
-            factor, 
+            factor,
             uc_subtraction(
-                tsdf.GetColorVal(loc1), 
-                tsdf.GetColorVal(loc2)
-            )
-        )
-    );
-
-    Vertex ret;
-    //{est_location, color, };
-    ret.position = est_location;
-    return ret;
+                tsdf.GetColorVal(loc1),
+                tsdf.GetColorVal(loc2))));
+    return Vertex{est_location, color};
 }
 
 Vector4f RayCasting::Ray::getLocation()
