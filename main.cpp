@@ -2,10 +2,10 @@
 #include <fstream>
 #include <array>
 
-
 #include "VirtualSensor.h"
 #include "Eigen.h"
 #include "Frame.h"
+#include "Voxels.h"
 
 
 int execute(){
@@ -38,16 +38,12 @@ int execute(){
     float edgeThreshold = 10;
     bool filtered = true;
 
-
-
-
     Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered);
 
     vector<float> depthVectorMap = currentFrame.getDepthMap();
     unsigned int levelSize = 5;
     vector<vector<float>> depthPyramid ;
 
-    
     currentFrame.buildDepthPyramid(depthVectorMap, depthPyramid, levelSize);
 
 
@@ -63,7 +59,7 @@ int execute(){
 			return -1;
 	}
     }
-    
+
 
     return 0;
 }
@@ -72,8 +68,6 @@ int execute(){
 int main(){
     
     int res;
-    
     res = execute();
-
     return res;
 }

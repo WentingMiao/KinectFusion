@@ -1,7 +1,6 @@
 #include "Frame.h"
 
 
-
 //constructor of Frame
 Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics, Eigen::Matrix4f &depthExtrinsics, 
          Eigen::Matrix4f &trajectory, unsigned int width,unsigned int height, float edgeThreshold , bool filtered)
@@ -18,7 +17,6 @@ Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics,
            we convert it to 4 unsigned char type */
              _colorMap[i] = Vector4uc(colorMap[4*i], colorMap[4*i+1], colorMap[4*i+2], colorMap[4*i+3]);
         }
-
     }else{
          /* depth map without bilateralFilter */ 
         vector<float> unfileredMap = vector<float>(_width * _height);
@@ -26,8 +24,6 @@ Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics,
              unfileredMap[i] = depthMap[i];
              _colorMap[i] = Vector4uc(colorMap[4*i], colorMap[4*i+1], colorMap[4*i+2], colorMap[4*i+3]);
         }
-
-  
         applyBilateralFilter( unfileredMap,  _depthMap, _width, _height);   
         
     }

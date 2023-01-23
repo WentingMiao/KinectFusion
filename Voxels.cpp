@@ -1,21 +1,21 @@
 #include "Voxels.h"
 
-Vector4f VoxelInterface::World2Camera(Vector4f world_location)
+Vector4f VoxelInterface::World2Camera(const Vector4f& world_location)
 {
     return _Pose * world_location;
 }
 
-Vector4f VoxelInterface::Camera2World(Vector4f camera_location)
+Vector4f VoxelInterface::Camera2World(const Vector4f& camera_location)
 {
     return _Pose.inverse() * camera_location;
 }
 
-float VoxelInterface::getGridlen()
+float VoxelInterface::getGridlen() const
 {
     return _grid_len;
 }
 
-bool VoxelArray::isValidLocation(Vector4f location)
+bool VoxelArray::isValidLocation(const Vector4f& location) const
 {
     if ((location(0) / location(3)) < _valid_location_range(0, 0) || (location(0) / location(3)) > _valid_location_range(0, 1))
         return false;
@@ -26,7 +26,7 @@ bool VoxelArray::isValidLocation(Vector4f location)
     return true;
 }
 
-unsigned VoxelArray::location2idx(Vector4f location)
+unsigned VoxelArray::location2idx(const Vector4f& location) const
 {
     if (!isValidLocation(location))
         throw std::out_of_range("Invalid world location");
@@ -36,36 +36,36 @@ unsigned VoxelArray::location2idx(Vector4f location)
     return x + y * _size[0] + z * _size[0] * _size[1];
 }
 
-void VoxelArray::SetWeightVal(Vector4f location, float weight)
+void VoxelArray::SetWeightVal(const Vector4f& location, float weight)
 {
     unsigned idx = location2idx(location);
     voxel[idx].weight = weight;
 }
 
-void VoxelArray::SetSDFVal(Vector4f location, float sdf)
+void VoxelArray::SetSDFVal(const Vector4f& location, float sdf)
 {
     unsigned idx = location2idx(location);
     voxel[idx].sdf = sdf;
 }
 
-void VoxelArray::SetColorVal(Vector4f location, Vector4uc color)
+void VoxelArray::SetColorVal(const Vector4f& location, Vector4uc color)
 {
     unsigned idx = location2idx(location);
     voxel[idx].color = color;
 }
 
-float VoxelArray::GetWeightVal(Vector4f location)
+float VoxelArray::GetWeightVal(const Vector4f& location) const
 {
     unsigned idx = location2idx(location);
     return voxel[idx].weight;
 }
 
-float VoxelArray::GetSDFVal(Vector4f location)
+float VoxelArray::GetSDFVal(const Vector4f& location) const
 {
     unsigned idx = location2idx(location);
     return voxel[idx].sdf;
 }
-Vector4uc VoxelArray::GetColorVal(Vector4f location)
+Vector4uc VoxelArray::GetColorVal(const Vector4f& location) const
 {
     unsigned idx = location2idx(location);
     return voxel[idx].color;

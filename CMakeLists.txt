@@ -32,12 +32,14 @@ set(HEADERS
     FreeImageHelper.h
     VirtualSensor.h
     Frame.h
+    Voxels.h
 )
 
 set(SOURCES
     main.cpp
     FreeImageHelper.cpp
     Frame.cpp
+    Voxels.cpp
 )
 
 
