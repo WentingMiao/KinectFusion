@@ -54,7 +54,7 @@ Vector4f RayCasting::Pixel2World(unsigned int x, unsigned int y)
     return _Pose * Vector4f{z * (x - cX) / fX, z * (y - cY) / fY, z, 1.f};
 }
 
-Vertex RayCasting::CastPixel(int x, int y)
+Vertex RayCasting::CastPixel(const unsigned x, const unsigned y)
 {
     /*
     Building Ray:
@@ -63,17 +63,15 @@ Vertex RayCasting::CastPixel(int x, int y)
         step() until meet surface or end
         if meet surface -> location prediction, return vertex
     */
-    Ray r{tsdf.Camera2World(Vector4f{0, 0, 0, 0}), Pixel2World(x, y), tsdf.getGridlen() / 2};
+    Ray r{tsdf.Camera2World(Vector4f{0, 0, 0, 0}), Pixel2World(x, y), tsdf.getGridlen() / 2, 0.0f};
     Vector4f lastLocation;
     Vector4f currLocation;
-    while (tsdf.isValidLocation(r.getLocation())) // todo: is valid distance
+    while (tsdf.isValidLocation(r.getLocation())) // TODO: is valid distance
     {
         lastLocation = currLocation;
         currLocation = r.getLocation();
         if (tsdf.GetSDFVal(lastLocation) * tsdf.GetSDFVal(currLocation) <= 0) // surface
-        {
             return interpolation(lastLocation, currLocation);
-        }
         else
             r.step();
     }
@@ -124,9 +122,4 @@ Vector4f RayCasting::Ray::getLocation()
     loc.block<3, 1>(0, 0) = _origin + _distance * _direction;
     loc(3) = 1;
     return loc;
-}
-
-void RayCasting::Ray::step()
-{
-    _distance += _step_size;
 }
