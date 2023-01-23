@@ -32,9 +32,9 @@ class Frame{
         void buildColorPyramid(vector<Vector4uc>& originalMap, vector<vector<Vector4uc>>& outputMap, unsigned int maxLevel);
 
 
-        bool writeMesh(vector<Vertex>& vectices, const string& filename);
+        bool writeMesh(vector<Vertex>& vectices, const string& filename, unsigned int level);
 
-
+        vector<vector<Vertex>>  getPyramidVertex();
 
         /*setter function*/
         void setFilterSize(int size);
