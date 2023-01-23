@@ -45,11 +45,27 @@ Vector4f VoxelArray::idx2location(const unsigned idx) const {
     */
     if (idx >= voxel.size())
         throw std::out_of_range("Invalid index: " + std::to_string(idx));
+    std::array<unsigned, 3> xyz = idx2xyz(idx);
+    return Vector4f{xyz[0] * _grid_len + _origin(0) + _grid_len / 2, xyz[1] * _grid_len + _origin(1) + _grid_len / 2, 
+    xyz[2] * _grid_len + _origin(2) + _grid_len / 2, 1};
+}
+
+Vector4f VoxelArray::xyz2location(const unsigned x, const unsigned y, const unsigned z) const {
+    if (x >= _size[0] || y >= _size[1] || z >= _size[2])
+        throw std::out_of_range("Invalid index");
+    return Vector4f{x * _grid_len + _origin(0) + _grid_len / 2, y * _grid_len + _origin(1) + _grid_len / 2, 
+    z * _grid_len + _origin(2) + _grid_len / 2, 1};
+}
+
+unsigned VoxelArray::xyz2idx(const unsigned x, const unsigned y, const unsigned z) const {
+    return x + y * _size[0] + z * _size[0] * _size[1];
+}
+
+std::array<unsigned, 3> VoxelArray::idx2xyz(const unsigned idx) const {
     unsigned x = idx % _size[0];
     unsigned y = std::floor((idx % (_size[0] * _size[1]) - x) / _size[0]);
     unsigned z = std::floor(idx / (_size[0] * _size[1]));
-    return Vector4f{x * _grid_len + _origin(0) + _grid_len / 2, y * _grid_len + _origin(1) + _grid_len / 2, 
-    z * _grid_len + _origin(2) + _grid_len / 2, 1};
+    return std::array<unsigned, 3>{x, y, z};
 }
 
 void VoxelArray::SetWeightVal(const Vector4f& location, float weight)

@@ -2,7 +2,7 @@
 #include "Frame.h"
 #include "Eigen.h"
 #include "vector"
-#define DEBUG
+// #define DEBUG
 /*
 TODO:
     2. world与camera坐标转换如果常用可以独立成camera类
@@ -68,6 +68,9 @@ private:
     Vector3f _origin; // corner of grid , {-3, -3, 0} may be appropriate
     unsigned location2idx(const Vector4f& location) const; // world location to voxel index
     Vector4f idx2location(const unsigned idx) const;
+    Vector4f xyz2location(const unsigned x, const unsigned y, const unsigned z) const;
+    unsigned xyz2idx(const unsigned x, const unsigned y, const unsigned z) const;
+    std::array<unsigned, 3> idx2xyz(const unsigned idx) const;
     std::array<unsigned, 3> _size;
     std::vector<VoxelElement> voxel;
     Matrix<float, 3, 2> _valid_location_range; // valid range of world location
