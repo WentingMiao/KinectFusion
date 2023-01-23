@@ -1,8 +1,7 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.11)
 
 set(PROJECT_NAME KinectFusion)
 project(${PROJECT_NAME})
-
 
 
 
@@ -25,7 +24,9 @@ set(CMAKE_CXX_STANDARD 14)
 
 #find required packages 
 find_package(Eigen3 REQUIRED)
+include_directories(${Eigen3_INCLUDE_DIRS})
 find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 set(HEADERS 
     Eigen.h
@@ -33,6 +34,7 @@ set(HEADERS
     VirtualSensor.h
     Frame.h
     Voxels.h
+    RayCasting.h
 )
 
 set(SOURCES
@@ -40,6 +42,7 @@ set(SOURCES
     FreeImageHelper.cpp
     Frame.cpp
     Voxels.cpp
+    RayCasting.cpp
 )
 
 

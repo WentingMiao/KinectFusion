@@ -36,6 +36,22 @@ unsigned VoxelArray::location2idx(const Vector4f& location) const
     return x + y * _size[0] + z * _size[0] * _size[1];
 }
 
+Vector4f VoxelArray::idx2location(const unsigned idx) const {
+    /*
+    -2.656 -> -2.70000005
+    -2.65 belong to [-2.7, -2.65]
+    but -2.7 have precision issue, which become -2.700005 that fall into another voxel!
+    This is partly why we should set location of voxel to its center, not corner
+    */
+    if (idx >= voxel.size())
+        throw std::out_of_range("Invalid index: " + std::to_string(idx));
+    unsigned x = idx % _size[0];
+    unsigned y = std::floor((idx % (_size[0] * _size[1]) - x) / _size[0]);
+    unsigned z = std::floor(idx / (_size[0] * _size[1]));
+    return Vector4f{x * _grid_len + _origin(0) + _grid_len / 2, y * _grid_len + _origin(1) + _grid_len / 2, 
+    z * _grid_len + _origin(2) + _grid_len / 2, 1};
+}
+
 void VoxelArray::SetWeightVal(const Vector4f& location, float weight)
 {
     unsigned idx = location2idx(location);

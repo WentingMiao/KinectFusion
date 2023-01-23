@@ -66,8 +66,7 @@ int execute(){
 
 
 int main(){
-    
-    int res;
+    int res = 0;
     res = execute();
     return res;
 }

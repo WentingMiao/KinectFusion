@@ -2,6 +2,7 @@
 #include "Frame.h"
 #include "Eigen.h"
 #include "vector"
+#define DEBUG
 /*
 TODO:
     2. world与camera坐标转换如果常用可以独立成camera类
@@ -33,8 +34,9 @@ public:
     Vector4f World2Camera(const Vector4f& world_location);
     Vector4f Camera2World(const Vector4f& camera_location);
     float getGridlen() const ;
-
+#ifndef DEBUG
 protected:
+#endif
     const float _grid_len;
     Matrix4f _Pose;        // camera pose
 };
@@ -60,9 +62,12 @@ public:
     virtual float GetSDFVal(const Vector4f& location) const override;
     virtual Vector4uc GetColorVal(const Vector4f& location) const override;
 
+#ifndef DEBUG
 private:
+#endif
     Vector3f _origin; // corner of grid , {-3, -3, 0} may be appropriate
-    unsigned location2idx(const Vector4f& location) const;
+    unsigned location2idx(const Vector4f& location) const; // world location to voxel index
+    Vector4f idx2location(const unsigned idx) const;
     std::array<unsigned, 3> _size;
     std::vector<VoxelElement> voxel;
     Matrix<float, 3, 2> _valid_location_range; // valid range of world location

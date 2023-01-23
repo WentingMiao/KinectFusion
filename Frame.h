@@ -9,12 +9,13 @@ struct Vertex{
     // position stored as 4 floats (4th component represents supposed to be 1.0)
     // Vector4f(MINF, MINF, MINF, MINF) represents invalid point
 	Vector4f position;
-
 	// color stored as 4 unsigned char,  Vector4uc(0,0,0,0) represents invalid color
 	Vector4uc color; 
-
     //normal of the point , Vector3f(MINF, MINF, MINF) represents invalid normal
     Vector3f normal;
+    Vertex(Vector4f p, Vector4uc c, Vector3f n): position{p}, color{c}, normal{n} {};
+    Vertex(): Vertex(Vector4f(MINF, MINF, MINF, MINF), Vector4uc(0,0,0,0), Vector3f(MINF, MINF, MINF)) {};
+    // make invalid vertex if no argument provided
 };
 
 class Frame{
