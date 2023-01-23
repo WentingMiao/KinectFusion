@@ -23,7 +23,7 @@ class Frame{
 
         //Frame constructor
         Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics, Eigen::Matrix4f &depthExtrinsics, 
-         Eigen::Matrix4f &trajectory, unsigned int width,unsigned int height, float edgeThreshold, bool filtered);
+         Eigen::Matrix4f &trajectory, unsigned int width,unsigned int height, float edgeThreshold, bool filtered, unsigned int maxLevel);
 
 
         void applyBilateralFilter(vector<float>& originalDepth, vector<float>& outputDepth, unsigned int width, unsigned int height);
@@ -63,7 +63,7 @@ class Frame{
         int _dValue= 5; //Diameter of each pixel neighborhood that is used during filtering. 
         
        // double _sigmaColor = 0.033f; //Filter sigma in the color space. 
-
+        unsigned int _maxLevel;
         double _sigmaColor = 9.0f; 
         double _sigmaSpace = 525.0f; //Filter sigma in the coordinate space
 
@@ -77,6 +77,13 @@ class Frame{
 
         float _edgeThreshold;
 
+        vector<float> _pyramidWidth;
+        vector<float> _pyramidHeight;
+
+        vector<vector<Vertex>> _pyramidVertex;
+        vector<vector<float>> _pyramidDepthMap;
+
+        vector<Matrix3f> _allDepthIntrinsic;
         vector<Vertex> vertices;
         
 };

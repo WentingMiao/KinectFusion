@@ -4,8 +4,8 @@
 
 //constructor of Frame
 Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics, Eigen::Matrix4f &depthExtrinsics, 
-         Eigen::Matrix4f &trajectory, unsigned int width,unsigned int height, float edgeThreshold , bool filtered)
-: _width(width), _height(height), _depthIntrinsics(depthIntrinsics), _depthExtrinsics(depthExtrinsics), _edgeThreshold(edgeThreshold),_trajectory(trajectory)
+         Eigen::Matrix4f &trajectory, unsigned int width,unsigned int height, float edgeThreshold , bool filtered, unsigned int maxLevel)
+: _width(width), _height(height), _depthIntrinsics(depthIntrinsics), _depthExtrinsics(depthExtrinsics), _edgeThreshold(edgeThreshold),_trajectory(trajectory) ,_maxLevel(maxLevel)
 {
     _colorMap = vector<Vector4uc>(_width * _height);
     _depthMap = vector<float>(_width * _height);
@@ -32,7 +32,29 @@ Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics,
         
     }
     
+    for(unsigned int level=0; level < _maxLevel; level++){
 
+        Matrix3f levelCameraIntrinstics{_depthIntrinsics};
+        float scale = pow(0.5, level);
+
+        levelCameraIntrinstics(0,0) *= scale; // focal x
+        levelCameraIntrinstics(1,1) *= scale; // focal y
+
+        levelCameraIntrinstics(0,1) *= scale;  //axis skew (usually 0)
+
+        levelCameraIntrinstics(0,2) *= scale; //principal point mx
+        levelCameraIntrinstics(1,2) *= scale; // principal point my
+
+        _allDepthIntrinsic.push_back(levelCameraIntrinstics);
+
+        float height = _height * scale;
+        float width = _width * scale;
+
+        _pyramidHeight.push_back(height);
+        _pyramidWidth.push_back(width);
+
+        
+    }
 
    
 
