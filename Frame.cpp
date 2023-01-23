@@ -10,17 +10,14 @@ Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics,
     _colorMap = vector<Vector4uc>(_width * _height);
     _depthMap = vector<float>(_width * _height);
     if(!filtered){
-
+        /* depth map without bilateralFilter */ 
         for (unsigned int i = 0 ; i < _width * _height; i++){
              _depthMap[i] = depthMap[i];
-            /* color is stored as RGBX in row major (4 byte values per pixel) 
-           so the size of colorMap is 4 * width * height
-           we convert it to 4 unsigned char type */
              _colorMap[i] = Vector4uc(colorMap[4*i], colorMap[4*i+1], colorMap[4*i+2], colorMap[4*i+3]);
         }
 
     }else{
-         /* depth map without bilateralFilter */ 
+         /* depth map with bilateralFilter */ 
         vector<float> unfileredMap = vector<float>(_width * _height);
         for (unsigned int i = 0 ; i < _width * _height; i++){
              unfileredMap[i] = depthMap[i];
@@ -358,8 +355,6 @@ bool Frame::writeMesh(vector<Vertex>& vertices, const string& filename, unsigned
 
 
 
-    return true;
-
 }
 
 void Frame::buildDepthPyramid(vector<float>& originalMap, vector<vector<float>>& outputMap, unsigned int maxLevel){
@@ -396,23 +391,8 @@ void Frame::buildColorPyramid(vector<Vector4uc>& originalMap, vector<vector<Vect
 
 
 Matrix3f Frame::getLevelCameraIntrinstics(unsigned int level){
-    if(level == 0){
-        return _depthIntrinsics;
-    }
-
-    Matrix3f levelCameraIntrinstics{_depthIntrinsics};
-
-    float scale = pow(0.5, level);
-
-    levelCameraIntrinstics(0,0) *= scale; // focal x
-    levelCameraIntrinstics(1,1) *= scale; // focal y
-
-    levelCameraIntrinstics(0,1) *= scale;  //axis skew (usually 0)
-
-    levelCameraIntrinstics(0,2) *= scale; //principal point mx
-    levelCameraIntrinstics(1,2) *= scale; // principal point my
-
-    return levelCameraIntrinstics;
+    
+    return _allDepthIntrinsic[level];
 }
 
 
@@ -420,7 +400,7 @@ vector<vector<Vertex>>  Frame::getPyramidVertex(){
 
 
     for(unsigned int level = 0; level < _maxLevel; level++){
-        cout<<"Level = "<<level <<endl;
+        
         float levelHeight = _pyramidHeight[level];
         float levelWidth = _pyramidWidth[level];
         float MAX_DISTANCE = 0.033f * 3.0f;
@@ -476,8 +456,7 @@ vector<vector<Vertex>>  Frame::getPyramidVertex(){
 
             _pyramidDepthMap.push_back(tmpDepthMap);
         }
-        cout<<"Level size =  " << levelHeight << "*" << levelWidth<<endl;
-        cout<< "level depthMap size = " << _pyramidDepthMap[level].size()<<endl;
+       
 
 
         vector<Vertex> vertices(levelWidth * levelHeight);
