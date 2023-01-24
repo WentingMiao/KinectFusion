@@ -32,23 +32,17 @@ Pose() = default;
  * 
  * @note need change after pyramid added
  */
-bool pose_estimation(const std::vector<Vertex>& frame_data,
-                     const std::vector<Vertex>& model_data,
-                     const Matrix3f &Intrinsics,
+bool pose_estimation(const std::vector<vector<Vertex>>& frame_data,
+                     const std::vector<vector<Vertex>>& model_data,
+                     const std::vector<Matrix3f>& intrinstics,
                      const float distance_threshold,
                      const float angle_threshold, //with angle °
-                     const int& num_iteration,
-                     const unsigned int& width,
-                     const unsigned int& height,
-                     const unsigned int& pyramid_level,
+                     const std::vector<int>& num_iteration,
+                     const std::vector<int>& width,
+                     const std::vector<int>& height,
+                     const int& pyramid_level,
                      Eigen::Matrix4f& cur_pose
 );
-
-VectorXf estimatePosePointToPlane(const std::vector<Vector3f>& sourcePoints, 
-                                  const std::vector<Vector3f>& targetPoints, 
-                                  const std::vector<Vector3f>& targetNormals,
-                                  double &error);
-
 
 void data_association(const std::vector<Vertex>& frame_data,
                       const Matrix3f &Intrinsics,

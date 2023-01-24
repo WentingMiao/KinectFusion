@@ -43,21 +43,24 @@ int execute(){
     bool filtered = true;
 
 
+    /*
+        configuration of pose estimation
+    */
     Eigen::Matrix4f cur_pose = Matrix4f::Identity();
 
-    const float distance_threshold = 0.1f;
+    const float distance_threshold = 0.01f;
     const float angle_threshold = 20.0f;
-    const int num_iteration = 10;
-    const int pyramid_level = 3;
+    std::vector<int> num_iterations = std::vector<int>{ 10, 5, 4 }; // from last to front
+    const int max_level = 3;
 
-    Frame previousFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered);
+    Frame previousFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered, max_level);
 
     vector<float> depthVectorMap = previousFrame.getDepthMap();
 
     vector<vector<float>> depthPyramid;
     // level 0 is large
 
-    previousFrame.buildDepthPyramid(depthVectorMap, depthPyramid, pyramid_level);
+    previousFrame.buildDepthPyramid(depthVectorMap, depthPyramid, max_level);
 
     vector<Vertex> vertices = previousFrame.getVertices(USE_ICP);
     
@@ -66,14 +69,14 @@ int execute(){
     stringstream ss;
     ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
     cout<<ss.str()<<endl;
-    if (!previousFrame.writeMesh(vertices,ss.str())){
+    if (!previousFrame.writeMesh(vertices,ss.str(),0)){
             cout << "Failed to write mesh!\nCheck file path!" << endl;
             return -1;
     }
     // Initialization completed (frame 0 finished)
 
     // frame 1 start
-    while(sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 30){
+    while(sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 2){
         Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
         Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics();
         Matrix4f trajectory = sensor.GetTrajectory();
@@ -84,20 +87,26 @@ int execute(){
         unsigned int width  = sensor.GetDepthImageWidth();
         unsigned int height = sensor.GetDepthImageHeight();
         
-        Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered);   
+        Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered, max_level);   
 
         // currentFrame.buildDepthPyramid(depthVectorMap, depthPyramid, pyramid_level);
 
         Pose pose;
-        pose.pose_estimation(currentFrame.getVertices(USE_ICP),
-                             previousFrame.getVertices(USE_ICP),
-                             depthIntrinsics,
+        auto level_intrinsics = currentFrame.getLevelCameraIntrinstics();
+        auto level_current_vertices = currentFrame.getPyramidVertex(USE_ICP);
+        auto level_previous_vertices = previousFrame.getPyramidVertex(USE_ICP);
+        auto level_width = currentFrame.getLevelWidth();
+        auto level_height = currentFrame.getLevelHeight();
+        
+        pose.pose_estimation(level_current_vertices,
+                             level_previous_vertices,
+                             level_intrinsics,
                              distance_threshold,
                              angle_threshold,
-                             num_iteration,
-                             width,
-                             height,
-                             pyramid_level,
+                             num_iterations,
+                             level_width,
+                             level_height,
+                             max_level,
                              cur_pose);            
     
         //get source vertex map (frame k)
@@ -111,7 +120,7 @@ int execute(){
         stringstream ss;
         ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
         cout<<ss.str()<<endl;
-        if (!currentFrame.writeMesh(vertices,ss.str())){
+        if (!currentFrame.writeMesh(vertices,ss.str(),0)){
                 cout << "Failed to write mesh!\nCheck file path!" << endl;
                 return -1;
         }

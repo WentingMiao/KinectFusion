@@ -37,7 +37,7 @@ class Frame{
 
         bool writeMesh(vector<Vertex>& vectices, const string& filename, unsigned int level);
 
-        vector<vector<Vertex>>  getPyramidVertex();
+        vector<vector<Vertex>> getPyramidVertex(bool icp_state);
 
         /*setter function*/
         void setFilterSize(int size);
@@ -53,10 +53,14 @@ class Frame{
 
 
         Matrix3f getLevelCameraIntrinstics(unsigned int level);
+        std::vector<Matrix3f> getLevelCameraIntrinstics();
+
         Matrix4f getDepthExtrinsics(); // get depth extrinsives
         Matrix3f getDepthIntrinsics(); // get camera intrinsives
         unsigned int getWidth(); //get width of depth image
         unsigned int getHeight(); //get height of depth image
+        std::vector<int> getLevelWidth();
+        std::vector<int> getLevelHeight();
 
      private:
         unsigned int _width;
@@ -80,8 +84,8 @@ class Frame{
 
         float _edgeThreshold;
 
-        vector<float> _pyramidWidth;
-        vector<float> _pyramidHeight;
+        vector<int> _pyramidWidth;
+        vector<int> _pyramidHeight;
 
         vector<vector<Vertex>> _pyramidVertex;
         vector<vector<float>> _pyramidDepthMap;

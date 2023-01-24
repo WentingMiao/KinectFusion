@@ -12,54 +12,59 @@ std::mutex mut;
 
 
 
-bool Pose::pose_estimation(const std::vector<Vertex>& frame_data,
-                     const std::vector<Vertex>& model_data,
-                     const Matrix3f &Intrinsics,
+bool Pose::pose_estimation(const std::vector<vector<Vertex>>& frame_data,
+                     const std::vector<vector<Vertex>>& model_data,
+                     const std::vector<Matrix3f>& intrinstics,
                      const float distance_threshold,
                      const float angle_threshold, //with angle °
-                     const int& num_iteration,
-                     const unsigned int& width,
-                     const unsigned int& height,
-                     const unsigned int& pyramid_level,
+                     const std::vector<int>& num_iteration,
+                     const std::vector<int>& width,
+                     const std::vector<int>& height,
+                     const int& pyramid_level,
                      Eigen::Matrix4f& cur_pose
 )
 {
+
     // step 1: Initialize pose 
     m_current_pose = cur_pose;
     m_previous_pose = m_current_pose;
 
-    // step 2: Data association
-    // Note that we use current points in k project to k-1, but still find correspondence
-
-    for(int it = 0; it < num_iteration; ++it){
+    for(auto level = pyramid_level -1; level >= 0; --level){
         
-        clock_t begin = clock();
+        // step 2: Data association
+        // Note that we use current points in k project to k-1, but still find correspondence
 
-        std::unordered_map<int, int> matches;
-        std::unordered_map<int, int> selected_matches;
+        for(int it = 0; it < num_iteration[level]; ++it){
+            
+            clock_t begin = clock();
 
-        // step 2.1: data association + back projection
-        data_association(frame_data, Intrinsics, width, height, matches);
+            std::unordered_map<int, int> matches;
+            std::unordered_map<int, int> selected_matches;
 
-        // step 2.2: outlier check 
-        outlier_check(frame_data, model_data, matches, selected_matches, distance_threshold, angle_threshold);
+            // step 2.1: data association + back projection
+            data_association(frame_data[level], intrinstics[level], width[level], height[level], matches);
 
-        // for evaluation
+            // step 2.2: outlier check 
+            outlier_check(frame_data[level], model_data[level], matches, selected_matches, distance_threshold, angle_threshold);
 
-        clock_t end = clock();
-        double elapsedSecs = double(end - begin) / CLOCKS_PER_SEC;
-        if(DEBUG){
-            std::cout << "Data association completed in " << elapsedSecs << " seconds. " << std::endl;
-            std::cout << "find match pairs: " << matches.size() << ", after detection: " << selected_matches.size() << std::endl;
-            if(!selected_matches.size()) throw std::out_of_range("No match pairs, some error exist!!");
+            // for evaluation
 
-        }
+            clock_t end = clock();
+            double elapsedSecs = double(end - begin) / CLOCKS_PER_SEC;
+            if(DEBUG){
+                std::cout << "level is: " << level << endl;
+                std::cout << "current iteration is: " << it << endl;
+                std::cout << "Data association completed in " << elapsedSecs << " seconds. " << std::endl;
+                std::cout << "find match pairs: " << matches.size() << ", after detection: " << selected_matches.size() << std::endl;
+                if(!selected_matches.size()) throw std::out_of_range("No match pairs, some error exist!!");
 
-        // step 2.3: point to plane ICP
-        incremental_caculation(frame_data, model_data, selected_matches, it);
+            }
 
-    } 
+            // step 2.3: point to plane ICP
+            incremental_caculation(frame_data[level], model_data[level], selected_matches, it);
 
+        } 
+    }
 
     if(DEBUG){
         std::cout << "Optimization iteration done " << std::endl;
