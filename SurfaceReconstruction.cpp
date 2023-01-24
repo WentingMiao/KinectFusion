@@ -7,12 +7,13 @@
 #include "VirtualSensor.h"
 #include "Eigen.h"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
 #include "Frame.h"
-#include "voxel.h"
+#include "Voxels.h"
 #include "SurfaceReconstruction.hpp"
+#include "vector"
 
 bool Fusion::SurfaceReconstruction(
     const std::shared_ptr<Frame>& cur_Frame,
-    const std::shared_ptr<Volume>& volume,
+	const std::shared_ptr<VoxelArray>& volume,
     const Eigen::Matrix4f& _pose,
     double truncationDistance) 
 {
@@ -23,26 +24,27 @@ bool Fusion::SurfaceReconstruction(
     Matrix3f Intrinsics = cur_Frame->getDepthIntrinsics(); //camera intrinsics matrix of shape (3, 3)
     //Matrix4f depthExtrinsics = cur_Frame->getDepthExtrinsics(); //// depth extrinsives
 
-    //之前定义的volume类 把相同的功能在voxel实现一下或者直接传进来都行
-    auto voxelData = volume->getVoxelData(); //save voxel data
-    auto voxelScale = volume->getVoxelSize(); //voxel scale 每个体素大小
-    auto volumeSize = volume->getVolumeSize(); //volume size 体素块大小
-
- 
+	double truncationDistance = 0.012f;
+	float voxelScale = volume->getGridlen(); //voxel size
+	std::array<unsigned, 3> volumeSize = volume->getVolumeSize(); //需要一个传递size的函数 返回volume.size
 
     //step2: traversal all the voxel in the colume
-    for (int z = 0; z < volumeSize.z(); z++) {
-        for (int y = 0; y < volumeSize.y(); y++) {
-            for (int x = 0; x < volumeSize.x(); x++) {
+    for (int z = 0; z < volumeSize[2]; z++) { //size(x, y , z)
+        for (int y = 0; y < volumeSize[1]; y++) {
+            for (int x = 0; x < volumeSize[0]; x++) {
 
                 //step2.1:voxel position in the world coordinates
                 Eigen::Vector3d position = grid2world(x, y, z, voxelScale);
+				
+				//3 dim -> 4 dim
+				Vector4f location = volume->xyz2location(position[0], position[1], position[2]); //私有函数
 
                 //step2.2:world coordinates -> camera coordinates
-                Eigen::Matrix3d rotation = pose.block(0, 0, 3, 3);
-                Eigen::Vector3d translation = pose.block(0, 3, 3, 1);
-                
-                Eigen::Vector3d cam_position = rotation * position + translation;    //current camera position
+
+                //Eigen::Matrix3d rotation = pose.block(0, 0, 3, 3);
+                //Eigen::Vector3d translation = pose.block(0, 3, 3, 1);
+                //Eigen::Vector3d cam_position = rotation * position + translation;    //current camera position
+				Eigen::Vector3d cam_position = volume->World2Camera(position);    //current camera position
                 // Check1:if the camera could see
                 if (cam_position.z() <= 0)
                     continue;
@@ -50,7 +52,7 @@ bool Fusion::SurfaceReconstruction(
                 //step2.3: project to camera coordinates (2d) to get the corresponding pixel coordinate value (x, y)
                 Vector2i uv = project2Camera(cam_position, Intrinsics);
 
-                /// Check2:if the projection point is correctly projected within the image extent
+                //Check2:if the projection point is correctly projected within the image extent
                 if (uv.x() < 0 || uv.x() >= width || uv.y() < 0 || uv.y() >= height)
                     continue;
 
@@ -64,7 +66,7 @@ bool Fusion::SurfaceReconstruction(
          
                 const float lambda = cal_Lamda(uv, Intrinsics);
                 const float sdf = cal_SDF(lambda, cam_position, depth);
-                const float sdf = (-1.f) * ((1.f / lambda) * cam_position.norm() - depth);
+                //const float sdf = (-1.f) * ((1.f / lambda) * cam_position.norm() - depth);
 
                 //SDF Conversion to TSDF
                 if (sdf >= -truncationDistance) {
@@ -73,11 +75,9 @@ bool Fusion::SurfaceReconstruction(
                     const float new_tsdf = fmin(1.f, sdf / truncationDistance);
 
                     //get TSDF and weight already stored in the current model
-                    size_t voxel_index = x + (y * volumeSize.x()) + (z * volumeSize.x() * volumeSize.y());
-
-                    //这几句需要根据现在的tsdf类修改
-                    const double old_tsdf = volume->getVoxelData()[voxel_index].tsdf;
-                    const double old_weight = volume->getVoxelData()[voxel_index].weight;
+                    //size_t voxel_index = x + (y * volumeSize[0]) + (z * volumeSize[0] * volumeSize[1]);
+					const double old_tsdf = volume->GetSDFVal(location);
+                    const double old_weight = volume->GetWeightVal(location);
 
                     //get updated TSDF and weight
                     const double new_weight = 1.0;
@@ -86,10 +86,24 @@ bool Fusion::SurfaceReconstruction(
                     const double updated_weight = old_weight + new_weight;
 
 
-                    volume->getVoxelData()[voxel_index].tsdf = updated_tsdf;
-                    volume->getVoxelData()[voxel_index].weight = updated_weight;
+                    volume->SetSDFVal(location, updated_tsdf);
+                    volume->SetWeightVal(location, updated_weight);
 
+					if (sdf <= truncationDistance / 2 && sdf >= -truncationDistance / 2) {
 
+						Vector4uc& voxel_color = volume->GetColorVal(location);
+						const Vector4uc image_color = cur_Frame->getColorMap()[uv.x() + (uv.y() * width)];
+
+						voxel_color[0] = (old_weight * voxel_color[0] + new_weight * image_color[0]) /
+							(old_weight + new_weight);
+						voxel_color[1] = (old_weight * voxel_color[1] + new_weight * image_color[1]) /
+							(old_weight + new_weight);
+						voxel_color[2] = (old_weight * voxel_color[2] + new_weight * image_color[2]) /
+							(old_weight + new_weight);
+						voxel_color[3] = (old_weight * voxel_color[3] + new_weight * image_color[3]) /
+							(old_weight + new_weight);
+						volume->SetColorVal(location, voxel_color);
+					}
                     }
                 }
             }
@@ -100,12 +114,10 @@ bool Fusion::SurfaceReconstruction(
 }
 
 
-
-
-//有的功能有重合可以合一下
 Eigen::Vector3d Fusion::grid2world(int &x, int &y, int &z, float voxelScale)
 {
     const Eigen::Vector3d position(
+		//0.5为体素中心
         (static_cast<double>(x) + 0.5) * voxelScale,
         (static_cast<double>(y) + 0.5) * voxelScale,
         (static_cast<double>(z) + 0.5) * voxelScale);
@@ -138,24 +150,10 @@ float Fusion::cal_Lamda(Eigen::Vector2i &uv, Eigen::Matrix3f &Intrinsics)
     return lambda;
 }
 
+
 float Fusion::cal_SDF(const float&lambda, Eigen::Vector3d &camera_pos, float depth)
 {
     return (-1.f)* ((1.f / lambda) * camera_pos.norm() - depth);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
