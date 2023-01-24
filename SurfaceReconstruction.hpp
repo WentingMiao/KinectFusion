@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Volume.hpp"
 #include "Frame.h"
 #include <memory>
 
@@ -10,14 +9,14 @@ public:
         * @description : Loop over every world point and calculate a truncated signed distance value (TSDF), along with a weight
         * @param cur_Frame: current frame
         * @param volume: The container which save the data
-        * @param cur_pose: The camera pose of shape £¨4£¬ 4)
+        * @param cur_pose: The camera pose of shape(4x4)
         * @param truncationDistance:
         * 
     */
-    bool SurfaceReconstruction(const std::shared_ptr<Frame>& cur_Frame, 
-                               const std::shared_ptr<Volume>& volume, 
-                               const Eigen::Matrix4f& _pose,
-                               double truncationDistance);
+		bool SurfaceReconstruction(const std::shared_ptr<Frame>& cur_Frame, 
+								   const std::shared_ptr<VoxelArray>& volume,
+								   const Eigen::Matrix4f& _pose,
+                                   double truncationDistance);
 
     private:
         Eigen::Vector3d grid2world(int& x, int& y, int& z, float voxelSize);
