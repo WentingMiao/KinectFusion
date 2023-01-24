@@ -1,7 +1,5 @@
 #include "Frame.h"
 
-
-
 //constructor of Frame
 Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics, Eigen::Matrix4f &depthExtrinsics, 
          Eigen::Matrix4f &trajectory, unsigned int width,unsigned int height, float edgeThreshold , bool filtered, unsigned int maxLevel)
@@ -44,8 +42,8 @@ Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics,
 
         _allDepthIntrinsic.push_back(levelCameraIntrinstics);
 
-        float height = _height * scale;
-        float width = _width * scale;
+        int height = std::round(_height * scale);
+        int width = std::round(_width * scale);
 
         _pyramidHeight.push_back(height);
         _pyramidWidth.push_back(width);
@@ -111,7 +109,7 @@ void Frame::setSigmaSpace(double sigmaSpace){
 
 /*getter function */
 
-vector<Vertex>  Frame::getVertices(){
+vector<Vertex>  Frame::getVertices(bool icp_state){
 
     vector<Vertex> vertices(_width * _height);
 
@@ -139,14 +137,19 @@ vector<Vertex>  Frame::getVertices(){
 
                 // Back-projection to camera space.
 				float x = z*(u-cX)/fX; 
-				float y = z*(v-cX)/fY; 
+				float y = z*(v-cY)/fY; 
+                //! Huge Error
                 
                 //get the point in camera coordinate
 				point_c = Vector4f(x, y, z, 1.0);
 
                 //get the point in global coordinate/ world coordinate
-                point_w =  _trajectory.inverse() * _depthExtrinsics.inverse() * point_c;
-                
+                if(icp_state){
+                    point_w =  _depthExtrinsics.inverse() * point_c;          
+                }
+                else{
+                    point_w =  _trajectory.inverse() * _depthExtrinsics.inverse() * point_c;
+                }
 
             }
             vertices[idx].color = color;
@@ -274,8 +277,8 @@ bool Frame::writeMesh(vector<Vertex>& vertices, const string& filename, unsigned
 
     float edgeThreshold = 0.01f; // 1cm
 
-    float levelHeight = _pyramidHeight[level];
-    float levelWidth =  _pyramidWidth[level];
+    int levelHeight = _pyramidHeight[level];
+    int levelWidth =  _pyramidWidth[level];
     unsigned int nVertices = levelWidth * levelHeight;
 
     unsigned nFaces = 0;	//Determine number of valid faces
@@ -395,14 +398,25 @@ Matrix3f Frame::getLevelCameraIntrinstics(unsigned int level){
     return _allDepthIntrinsic[level];
 }
 
+std::vector<Matrix3f> Frame::getLevelCameraIntrinstics(){
+    
+    return _allDepthIntrinsic;
+}
 
-vector<vector<Vertex>>  Frame::getPyramidVertex(){
+std::vector<int> Frame::getLevelWidth(){
+    return _pyramidWidth;
+}
+
+std::vector<int> Frame::getLevelHeight(){
+    return _pyramidHeight;
+}
+vector<vector<Vertex>>  Frame::getPyramidVertex(bool icp_state){
 
 
     for(unsigned int level = 0; level < _maxLevel; level++){
         
-        float levelHeight = _pyramidHeight[level];
-        float levelWidth = _pyramidWidth[level];
+        auto levelHeight = _pyramidHeight[level];
+        auto levelWidth = _pyramidWidth[level];
         float MAX_DISTANCE = 0.033f * 3.0f;
         if(level == 0){
             _pyramidDepthMap.push_back(_depthMap);
@@ -488,7 +502,12 @@ vector<vector<Vertex>>  Frame::getPyramidVertex(){
                     point_c = Vector4f(x, y, z, 1.0);
 
                     //get the point in global coordinate/ world coordinate
-                    point_w =  _trajectory.inverse() * _depthExtrinsics.inverse() * point_c;
+                    if(icp_state){
+                        point_w =  _depthExtrinsics.inverse() * point_c;          
+                    }
+                    else{
+                        point_w =  _trajectory.inverse() * _depthExtrinsics.inverse() * point_c;
+                    }
                     
 
                 }

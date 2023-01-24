@@ -1,6 +1,9 @@
+#pragma once
+
 #include "Eigen.h"
 #include "VirtualSensor.h"
 #include "opencv2/opencv.hpp"
+
 using namespace std;
 using namespace cv;
 
@@ -34,7 +37,7 @@ class Frame{
 
         bool writeMesh(vector<Vertex>& vectices, const string& filename, unsigned int level);
 
-        vector<vector<Vertex>>  getPyramidVertex();
+        vector<vector<Vertex>> getPyramidVertex(bool icp_state);
 
         /*setter function*/
         void setFilterSize(int size);
@@ -43,17 +46,21 @@ class Frame{
 
         /* getter function */
         vector<Eigen::Vector4f> getCameraPoints();// get points of camera cooridinate
-        vector<Vertex> getVertices(); // get vertices of the frame
+        vector<Vertex> getVertices(bool icp_state); // get vertices of the frame
         vector<float> getDepthMap(); //get depthmap of the frame
         vector<Vector4uc> getColorMap(); //get the colormap of the frame, type is Vector4uc 
 
 
 
         Matrix3f getLevelCameraIntrinstics(unsigned int level);
+        std::vector<Matrix3f> getLevelCameraIntrinstics();
+
         Matrix4f getDepthExtrinsics(); // get depth extrinsives
         Matrix3f getDepthIntrinsics(); // get camera intrinsives
         unsigned int getWidth(); //get width of depth image
         unsigned int getHeight(); //get height of depth image
+        std::vector<int> getLevelWidth();
+        std::vector<int> getLevelHeight();
 
      private:
         unsigned int _width;
@@ -77,8 +84,8 @@ class Frame{
 
         float _edgeThreshold;
 
-        vector<float> _pyramidWidth;
-        vector<float> _pyramidHeight;
+        vector<int> _pyramidWidth;
+        vector<int> _pyramidHeight;
 
         vector<vector<Vertex>> _pyramidVertex;
         vector<vector<float>> _pyramidDepthMap;
