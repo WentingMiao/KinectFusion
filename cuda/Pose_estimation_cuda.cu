@@ -40,7 +40,7 @@ void data_association_kernel(           const Vertex* frame_data,
                                         const unsigned int width,
                                         const unsigned int height,
                                         Match* matches,
-                                        int* match_count,
+                                        unsigned int* match_count,
                                         unsigned int frame_data_size,
                                         const Matrix4f previous_pose,
                                         const Matrix4f current_pose)
@@ -52,7 +52,7 @@ void data_association_kernel(           const Vertex* frame_data,
     
     const int idx = blockIdx.x * blockDim.x + threadIdx.x;
     // const int y = blockIdx.y * blockDim.y + threadIdx.y;
-
+    // printf("Thread %d found a match\n", idx); 
     // int idx = y * width + x;
     if (idx >= frame_data_size) {
         return;
@@ -82,6 +82,9 @@ void data_association_kernel(           const Vertex* frame_data,
             int previous_idx = point.y() * width + point.x();
             // i means point in frame k
             // previous means point in frame k-1
+
+            // printf("Thread %d found a match\n", idx);
+    
             int match_index = atomicAdd(match_count, 1);
             matches[match_index].cur_idx = idx;
             matches[match_index].prv_idx = previous_idx;            
@@ -109,48 +112,56 @@ void data_association_cuda(     const std::vector<Vertex>& frame_data,
     cudaMemcpy(d_Intrinsics, &Intrinsics, sizeof(Matrix3f), cudaMemcpyHostToDevice);
 
     Match* d_matches;
-    int* d_match_count;
+    unsigned int* d_match_count;
     cudaMalloc(&d_matches, frame_data.size() * sizeof(Match));
-    cudaMalloc(&d_match_count, sizeof(int));
+    cudaMalloc(&d_match_count, sizeof(unsigned int));
     int match_count = 0;
-    cudaMemcpy(d_match_count, &match_count, sizeof(int), cudaMemcpyHostToDevice);    
-    // cout << "d_frame_data is " << endl << d_frame_data-> << endl;
-    cout << "frame_data is " << endl << frame_data[120840].position << endl;
+    cudaMemcpy(d_match_count, &match_count, sizeof(unsigned int), cudaMemcpyHostToDevice);    
+
+    // // test memcpy
+    // std::vector<Vertex> h_frame_data(frame_data.size());
+    // cudaMemcpy(h_frame_data.data(), d_frame_data, sizeof(Vertex) * frame_data.size(), cudaMemcpyDeviceToHost);
     
+    // for(int i=0;i<frame_data.size();i++)
+    //     std::cout<<h_frame_data[i].position<<std::endl;    
     
     // Launch the kernel
-    // dim3 threads(32, 32);
-    // dim3 blocks(std::ceil(width / threads.x), std::ceil(height / threads.y));
-    // dim3 threads(256);
-    // dim3 blocks((frame_data.size() + threads.x - 1) / threads.x);    
-    dim3 grid(ceil(frame_data.size() / (float)32), 1, 1);
-    dim3 block(32, 1, 1);
-    data_association_kernel <<<grid, block>>> (d_frame_data, d_Intrinsics, width, height, d_matches, d_match_count, frame_data.size(), previous_pose, current_pose);
+    dim3 threads(256);
+    dim3 blocks((frame_data.size() + threads.x - 1) / threads.x);    
+
+    data_association_kernel <<<blocks, threads>>> (d_frame_data, d_Intrinsics, width, height, d_matches, d_match_count, frame_data.size(), previous_pose, current_pose);
+
+    cudaError_t error = cudaGetLastError();
+    if(error != cudaSuccess)
+    {
+        // print the CUDA error message and exit
+        printf("CUDA error: %s\n", cudaGetErrorString(error));
+        exit(-1);
+    }
+
     cudaDeviceSynchronize();
     // Copy data from device to host
 
     cudaMemcpy(&match_count, d_match_count, sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(matches.data(), d_matches, match_count * sizeof(Match), cudaMemcpyDeviceToHost);
 
-    Match* h_matches = new Match[h_match_count];
-    cudaMemcpy(h_matches, d_matches, sizeof(Match) * matches.size(), cudaMemcpyDeviceToHost);
+    Match* temp_matches_gpu = new Match[match_count];
+    cudaMemcpy(temp_matches_gpu, d_matches, match_count * sizeof(Match), cudaMemcpyDeviceToHost);
 
-    cudaDeviceSynchronize();
-    cout << "matches check: " << h_matches << endl;
-    cout << "check match_count_gpu: " << d_match_count << endl;
-    cout << "match count is: " << h_match_count<< endl;
+    matches.clear();
+    for (int i = 0; i < match_count; i++) {
+        matches.insert({temp_matches_gpu[i].cur_idx, temp_matches_gpu[i].prv_idx});
+    }
 
-    // matches.clear();
-    // for (int i = 0; i < *d_match_count; i++) {
-    // matches[h_matches[i].cur_idx] = h_matches[i].prv_idx;
-    // }
-    
+    delete[] temp_matches_gpu;
+
+    // cout << "value of match_count " << match_count << endl;
+
     // Free the GPU memory
 
     cudaFree(d_frame_data);
     cudaFree(d_matches);
     cudaFree(d_match_count);
-    delete[] h_matches;
+    cudaFree(d_Intrinsics);
 }
 
 }

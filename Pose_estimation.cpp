@@ -41,7 +41,9 @@ bool Pose::pose_estimation(const std::vector<vector<Vertex>>& frame_data,
             std::unordered_map<int, int> selected_matches;
 
             // step 2.1: data association + back projection
-            data_association(frame_data[level], intrinstics[level], width[level], height[level], matches);
+            // data_association(frame_data[level], intrinstics[level], width[level], height[level], matches);
+            
+            kinectfusion::data_association_cuda(frame_data[level], intrinstics[level], width[level], height[level], matches, m_previous_pose, m_current_pose);
 
             // step 2.2: outlier check 
             outlier_check(frame_data[level], model_data[level], matches, selected_matches, distance_threshold, angle_threshold, error);
@@ -55,7 +57,7 @@ bool Pose::pose_estimation(const std::vector<vector<Vertex>>& frame_data,
                 std::cout << "current iteration is: " << it << endl;
                 std::cout << "Data association completed in " << elapsedSecs << " seconds. " << std::endl;
                 std::cout << "find match pairs: " << matches.size() << ", after detection: " << selected_matches.size() << std::endl;
-                std::cout << "avarage error is " << error / selected_matches.size() << std::endl;
+                std::cout << "avarage error is: " << error / selected_matches.size() << std::endl;
                 if(!selected_matches.size()) throw std::out_of_range("No match pairs, some error exist!!");
 
             }
@@ -147,48 +149,10 @@ void Pose::outlier_check(const std::vector<Vertex>& frame_data,
 
     // version 1: with parallel
 
-    std::for_each(std::execution::par_unseq, matches.begin(), matches.end(), [&](const auto& m) {
+    // std::for_each(std::execution::par_unseq, matches.begin(), matches.end(), [&](const auto& m) {
 
-        int cur_idx = m.first;
-        int prv_idx = m.second;
-
-        Vector3f current_global_vertex = TransformToVertex(Vector4fToVector3f(frame_data[cur_idx].position), m_current_pose);
-        Vector3f current_global_normal = TransformToNormal(frame_data[cur_idx].normal, m_current_pose); 
-        Vector3f previous_global_vertex = TransformToVertex(Vector4fToVector3f(model_data[prv_idx].position), m_previous_pose);
-        Vector3f previous_global_normal = TransformToNormal(model_data[prv_idx].normal, m_previous_pose);
-
-        // avoid redundant caculation to speed up 
-        if (!isnan(current_global_vertex[0]) && !isnan(current_global_vertex[1]) && !isnan(current_global_vertex[2]) &&
-            !isnan(previous_global_vertex[0]) && !isnan(previous_global_vertex[1]) && !isnan(previous_global_vertex[2]) &&
-            current_global_vertex[0] != MINF && current_global_vertex[1] != MINF && current_global_vertex[2] != MINF &&
-            previous_global_vertex[0] != MINF && previous_global_vertex[1] != MINF && previous_global_vertex[2] != MINF &&
-            !isnan(previous_global_normal[0]) && !isnan(previous_global_normal[1]) && !isnan(previous_global_normal[2]) &&
-            previous_global_normal[0] != MINF && previous_global_normal[1] != MINF && previous_global_normal[2] != MINF){
-
-            //caculate norm
-            const float distance = (previous_global_vertex - current_global_vertex).norm();
-            
-            // std::cout << distance << std::endl;
-            if (distance <= distance_threshold){
-
-                auto normal_angle = acos(previous_global_normal.dot(current_global_normal) / 
-                (previous_global_normal.norm() * current_global_normal.norm()));
-                normal_angle = normal_angle * 180/PI;
-                if(normal_angle < angle_threshold){
-                    std::lock_guard<std::mutex> guard(mut);
-                    selected_matches.insert(std::pair<int, int>(cur_idx, prv_idx));  
-                    error += distance;
-                }
-            }
-        }
-    });    
-
-    // version 2: without parallel
-
-    // for(auto it = matches.begin(); it != matches.end(); ++it){
-
-    //     int cur_idx = it->first;
-    //     int prv_idx = it->second;
+    //     int cur_idx = m.first;
+    //     int prv_idx = m.second;
 
     //     Vector3f current_global_vertex = TransformToVertex(Vector4fToVector3f(frame_data[cur_idx].position), m_current_pose);
     //     Vector3f current_global_normal = TransformToNormal(frame_data[cur_idx].normal, m_current_pose); 
@@ -199,8 +163,8 @@ void Pose::outlier_check(const std::vector<Vertex>& frame_data,
     //     if (!isnan(current_global_vertex[0]) && !isnan(current_global_vertex[1]) && !isnan(current_global_vertex[2]) &&
     //         !isnan(previous_global_vertex[0]) && !isnan(previous_global_vertex[1]) && !isnan(previous_global_vertex[2]) &&
     //         current_global_vertex[0] != MINF && current_global_vertex[1] != MINF && current_global_vertex[2] != MINF &&
-    //         previous_global_vertex[0] != MINF && previous_global_vertex[1] != MINF && previous_global_vertex[2] != MINF
-    //         && !isnan(previous_global_normal[0]) && !isnan(previous_global_normal[1]) && !isnan(previous_global_normal[2]) &&
+    //         previous_global_vertex[0] != MINF && previous_global_vertex[1] != MINF && previous_global_vertex[2] != MINF &&
+    //         !isnan(previous_global_normal[0]) && !isnan(previous_global_normal[1]) && !isnan(previous_global_normal[2]) &&
     //         previous_global_normal[0] != MINF && previous_global_normal[1] != MINF && previous_global_normal[2] != MINF){
 
     //         //caculate norm
@@ -213,13 +177,51 @@ void Pose::outlier_check(const std::vector<Vertex>& frame_data,
     //             (previous_global_normal.norm() * current_global_normal.norm()));
     //             normal_angle = normal_angle * 180/PI;
     //             if(normal_angle < angle_threshold){
-    //                 // std::lock_guard<std::mutex> guard(mut);
+    //                 std::lock_guard<std::mutex> guard(mut);
     //                 selected_matches.insert(std::pair<int, int>(cur_idx, prv_idx));  
     //                 error += distance;
     //             }
     //         }
     //     }
-    // }    
+    // });    
+
+    // version 2: without parallel
+
+    for(auto it = matches.begin(); it != matches.end(); ++it){
+
+        int cur_idx = it->first;
+        int prv_idx = it->second;
+
+        Vector3f current_global_vertex = TransformToVertex(Vector4fToVector3f(frame_data[cur_idx].position), m_current_pose);
+        Vector3f current_global_normal = TransformToNormal(frame_data[cur_idx].normal, m_current_pose); 
+        Vector3f previous_global_vertex = TransformToVertex(Vector4fToVector3f(model_data[prv_idx].position), m_previous_pose);
+        Vector3f previous_global_normal = TransformToNormal(model_data[prv_idx].normal, m_previous_pose);
+
+        // avoid redundant caculation to speed up 
+        if (!isnan(current_global_vertex[0]) && !isnan(current_global_vertex[1]) && !isnan(current_global_vertex[2]) &&
+            !isnan(previous_global_vertex[0]) && !isnan(previous_global_vertex[1]) && !isnan(previous_global_vertex[2]) &&
+            current_global_vertex[0] != MINF && current_global_vertex[1] != MINF && current_global_vertex[2] != MINF &&
+            previous_global_vertex[0] != MINF && previous_global_vertex[1] != MINF && previous_global_vertex[2] != MINF
+            && !isnan(previous_global_normal[0]) && !isnan(previous_global_normal[1]) && !isnan(previous_global_normal[2]) &&
+            previous_global_normal[0] != MINF && previous_global_normal[1] != MINF && previous_global_normal[2] != MINF){
+
+            //caculate norm
+            const float distance = (previous_global_vertex - current_global_vertex).norm();
+            
+            // std::cout << distance << std::endl;
+            if (distance <= distance_threshold){
+
+                auto normal_angle = acos(previous_global_normal.dot(current_global_normal) / 
+                (previous_global_normal.norm() * current_global_normal.norm()));
+                normal_angle = normal_angle * 180/PI;
+                if(normal_angle < angle_threshold){
+                    // std::lock_guard<std::mutex> guard(mut);
+                    selected_matches.insert(std::pair<int, int>(cur_idx, prv_idx));  
+                    error += distance;
+                }
+            }
+        }
+    }    
 }
 
 void Pose::incremental_caculation   (const std::vector<Vertex>& frame_data,
@@ -246,26 +248,9 @@ void Pose::incremental_caculation   (const std::vector<Vertex>& frame_data,
 
         // version 1: with parallel
 
-        std::for_each(std::execution::par_unseq, selected_matches.begin(), selected_matches.end(), [&](const auto& it){
-            auto source_idx = it.first;
-            auto target_idx = it.second;            
-            // Note that sourcePoint always in camera space
-            s  = TransformToVertex(Vector4fToVector3f(frame_data[source_idx].position),m_current_pose);
-            d  = TransformToVertex(Vector4fToVector3f(model_data[target_idx].position),m_previous_pose);
-            n  = TransformToNormal(model_data[target_idx].normal,m_previous_pose);
-            A.block<1, 3>(i, 0) = s.cross(n).transpose();
-            A.block<1, 3>(i, 3) = n.transpose();
-            // part of point2plane, copied from paper
-            b(i) = (d - s).dot(n);
-            ++i;
-            // ICP incremental caculate
-        });
-
-        // version 2: without parallel
-
-        // for(auto it = selected_matches.begin(); it != selected_matches.end(); ++it){
-        //     auto source_idx = it->first;
-        //     auto target_idx = it->second;            
+        // std::for_each(std::execution::par_unseq, selected_matches.begin(), selected_matches.end(), [&](const auto& it){
+        //     auto source_idx = it.first;
+        //     auto target_idx = it.second;            
         //     // Note that sourcePoint always in camera space
         //     s  = TransformToVertex(Vector4fToVector3f(frame_data[source_idx].position),m_current_pose);
         //     d  = TransformToVertex(Vector4fToVector3f(model_data[target_idx].position),m_previous_pose);
@@ -276,7 +261,24 @@ void Pose::incremental_caculation   (const std::vector<Vertex>& frame_data,
         //     b(i) = (d - s).dot(n);
         //     ++i;
         //     // ICP incremental caculate
-        // }
+        // });
+
+        // version 2: without parallel
+
+        for(auto it = selected_matches.begin(); it != selected_matches.end(); ++it){
+            auto source_idx = it->first;
+            auto target_idx = it->second;            
+            // Note that sourcePoint always in camera space
+            s  = TransformToVertex(Vector4fToVector3f(frame_data[source_idx].position),m_current_pose);
+            d  = TransformToVertex(Vector4fToVector3f(model_data[target_idx].position),m_previous_pose);
+            n  = TransformToNormal(model_data[target_idx].normal,m_previous_pose);
+            A.block<1, 3>(i, 0) = s.cross(n).transpose();
+            A.block<1, 3>(i, 3) = n.transpose();
+            // part of point2plane, copied from paper
+            b(i) = (d - s).dot(n);
+            ++i;
+            // ICP incremental caculate
+        }
 
         
         MatrixXf ATA = A.transpose() * A;
@@ -334,3 +336,42 @@ Vector3f Pose::TransformToNormal(Vector3f normal, Eigen::Matrix4f Transformation
     return Transformation.block(0, 0, 3, 3) * normal;
 
 }
+
+
+// void Pose::data_association_cuda(const std::vector<Vertex>& frame_data,
+//                                 const Matrix3f &Intrinsics,
+//                                 const unsigned int& width,
+//                                 const unsigned int& height,
+//                                 std::unordered_map<int, int>& matches)
+// {
+//     // Allocate memory on the GPU
+//     Vertex* frame_data_gpu;
+//     cudaMalloc(&frame_data_gpu, sizeof(Vertex) * frame_data.size());
+//     Match* matches_gpu;
+//     cudaMalloc(&matches_gpu, sizeof(Match) * frame_data.size());
+//     int* match_count_gpu;
+//     cudaMalloc(&match_count_gpu, sizeof(int));
+
+//     // Copy data from host to device
+//     cudaMemcpy(frame_data_gpu, &frame_data[0], sizeof(Vertex) * frame_data.size(), cudaMemcpyHostToDevice);
+//     int match_count = matches.size();
+//     cudaMemcpy(match_count_gpu, &match_count, sizeof(int), cudaMemcpyHostToDevice);
+
+//     // Launch the kernel
+//     dim3 block(256);
+//     dim3 grid((frame_data.size() + block.x - 1) / block.x);
+//     kinectfusion::data_association_kernel <<<grid, block>>> (frame_data_gpu, Intrinsics, width, height, matches_gpu, match_count_gpu, frame_data.size());
+
+//     // Copy data from device to host
+//     cudaMemcpy(&matches[0], matches_gpu, sizeof(Match) * matches.size(), cudaMemcpyDeviceToHost);
+//     cudaMemcpy(&match_count, match_count_gpu, sizeof(int), cudaMemcpyDeviceToHost);
+    
+//     matches.clear();
+//     for (int i = 0; i < match_count; i++) {
+//         matches.insert({matches_gpu[i].cur_idx, matches_gpu[i].prv_idx});
+//     }    
+//     // Free the GPU memory
+//     cudaFree(frame_data_gpu);
+//     cudaFree(matches_gpu);
+//     cudaFree(match_count_gpu);
+// }

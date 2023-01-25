@@ -21,11 +21,21 @@ if(WIN32)
 endif(WIN32)
 
 # Set C++ flags
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lcudart")
+set(CMAKE_BUILD_TYPE Debug)
 
 #find required packages 
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
+
+find_package(CUDA REQUIRED)
+IF (CUDA_FOUND)
+    include_directories("${CUDA_INCLUDE_DIRS}")
+    message(STATUS "==> Found CUDA： " ${CUDA_INCLUDE_DIRS})
+    # Optional: Specify the arch of your CUDA hardware here
+    SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3;-std=c++17 -gencode arch=compute_86,code=sm_86 --expt-relaxed-constexpr )
+ENDIF ()
 
 set(HEADERS 
     Eigen.h
@@ -34,7 +44,8 @@ set(HEADERS
     Frame.h
     Pose_estimation.h
     SimpleMesh.h 
-    PointCloud.h     
+    PointCloud.h   
+    cuda/Pose_estimation_cuda.h  
 )
 
 set(SOURCES
@@ -44,16 +55,24 @@ set(SOURCES
     Pose_estimation.cpp
 )
 
+# add cuda files
+set(CUDA_SOURCES
+    cuda/Pose_estimation_cuda.cu
+)
+
+cuda_add_library(Pose_estimation_cuda ${CUDA_SOURCES})
 
 link_directories(${FreeImage_LIBRARY_DIR})
 link_directories(${OpenCV_INCLUDE_DIR})
-include_directories( ${OpenCV_INCLUDE_DIRS})
-
+include_directories(${OpenCV_INCLUDE_DIRS})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${EIGEN3_INCLUDE_DIR})
+include_directories(cuda)
 
 
 add_executable(KinectFusion ${HEADERS} ${SOURCES})
 target_include_directories(KinectFusion PUBLIC ${EIGEN3_INCLUDE_DIR} ${FreeImage_INCLUDE_DIR} ${OpenCV_INCLUDE_DIR})
-target_link_libraries(KinectFusion general Eigen3::Eigen freeimage ${OpenCV_LIBS} tbb)
+target_link_libraries(KinectFusion general Eigen3::Eigen freeimage ${OpenCV_LIBS} tbb cudart Pose_estimation_cuda)
 
 
 
