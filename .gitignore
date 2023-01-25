@@ -1,6 +1,7 @@
 Libs/**
 build/**
 Data/**
+Data
 tests/build/
 Content/**
 results/**
