@@ -13,7 +13,7 @@ Kinect Fusion is a technology that allows for the reconstruction of 3D models of
 FreeImage, Eigen
 
 **Structure requirement:**
-
+ `
 1. Data folder
     
     Create a ```Data/``` folder on the top level and add the data file inside.

@@ -1,26 +1,21 @@
 #include "Frame.h"
 
-
-
 //constructor of Frame
 Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics, Eigen::Matrix4f &depthExtrinsics, 
-         Eigen::Matrix4f &trajectory, unsigned int width,unsigned int height, float edgeThreshold , bool filtered)
-: _width(width), _height(height), _depthIntrinsics(depthIntrinsics), _depthExtrinsics(depthExtrinsics), _edgeThreshold(edgeThreshold),_trajectory(trajectory)
+         Eigen::Matrix4f &trajectory, unsigned int width,unsigned int height, float edgeThreshold , bool filtered, unsigned int maxLevel)
+: _width(width), _height(height), _depthIntrinsics(depthIntrinsics), _depthExtrinsics(depthExtrinsics), _edgeThreshold(edgeThreshold),_trajectory(trajectory) ,_maxLevel(maxLevel)
 {
     _colorMap = vector<Vector4uc>(_width * _height);
     _depthMap = vector<float>(_width * _height);
     if(!filtered){
-
+        /* depth map without bilateralFilter */ 
         for (unsigned int i = 0 ; i < _width * _height; i++){
              _depthMap[i] = depthMap[i];
-            /* color is stored as RGBX in row major (4 byte values per pixel) 
-           so the size of colorMap is 4 * width * height
-           we convert it to 4 unsigned char type */
              _colorMap[i] = Vector4uc(colorMap[4*i], colorMap[4*i+1], colorMap[4*i+2], colorMap[4*i+3]);
         }
 
     }else{
-         /* depth map without bilateralFilter */ 
+         /* depth map with bilateralFilter */ 
         vector<float> unfileredMap = vector<float>(_width * _height);
         for (unsigned int i = 0 ; i < _width * _height; i++){
              unfileredMap[i] = depthMap[i];
@@ -32,7 +27,29 @@ Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics,
         
     }
     
+    for(unsigned int level=0; level < _maxLevel; level++){
+        
+        Matrix3f levelCameraIntrinstics{_depthIntrinsics};
+        float scale = pow(0.5, level);
 
+        levelCameraIntrinstics(0,0) *= scale; // focal x
+        levelCameraIntrinstics(1,1) *= scale; // focal y
+
+        levelCameraIntrinstics(0,1) *= scale;  //axis skew (usually 0)
+
+        levelCameraIntrinstics(0,2) *= scale; //principal point mx
+        levelCameraIntrinstics(1,2) *= scale; // principal point my
+
+        _allDepthIntrinsic.push_back(levelCameraIntrinstics);
+
+        int height = std::round(_height * scale);
+        int width = std::round(_width * scale);
+
+        _pyramidHeight.push_back(height);
+        _pyramidWidth.push_back(width);
+
+        
+    }
 
    
 
@@ -92,7 +109,7 @@ void Frame::setSigmaSpace(double sigmaSpace){
 
 /*getter function */
 
-vector<Vertex>  Frame::getVertices(){
+vector<Vertex>  Frame::getVertices(bool icp_state){
 
     vector<Vertex> vertices(_width * _height);
 
@@ -120,14 +137,19 @@ vector<Vertex>  Frame::getVertices(){
 
                 // Back-projection to camera space.
 				float x = z*(u-cX)/fX; 
-				float y = z*(v-cX)/fY; 
+				float y = z*(v-cY)/fY; 
+                //! Huge Error
                 
                 //get the point in camera coordinate
 				point_c = Vector4f(x, y, z, 1.0);
 
                 //get the point in global coordinate/ world coordinate
-                point_w =  _trajectory.inverse() * _depthExtrinsics.inverse() * point_c;
-                
+                if(icp_state){
+                    point_w =  _depthExtrinsics.inverse() * point_c;          
+                }
+                else{
+                    point_w =  _trajectory.inverse() * _depthExtrinsics.inverse() * point_c;
+                }
 
             }
             vertices[idx].color = color;
@@ -251,11 +273,13 @@ bool ValidFace(vector<Vertex>& vertices, unsigned int v1, unsigned int v2, unsig
 	}
 }
 
-bool Frame::writeMesh(vector<Vertex>& vertices, const string& filename){
+bool Frame::writeMesh(vector<Vertex>& vertices, const string& filename, unsigned int level){
 
     float edgeThreshold = 0.01f; // 1cm
 
-    unsigned int nVertices = _width * _height;
+    int levelHeight = _pyramidHeight[level];
+    int levelWidth =  _pyramidWidth[level];
+    unsigned int nVertices = levelWidth * levelHeight;
 
     unsigned nFaces = 0;	//Determine number of valid faces
 
@@ -263,12 +287,12 @@ bool Frame::writeMesh(vector<Vertex>& vertices, const string& filename){
 	vector<Vector3i> faces;
 
 	
-	for(int row=0; row < _height-1; row++){
-		for(int col=0; col < _width-1; col++){
-			int id1 = row * _width + col;
-			int id2 = row * _width + col + 1;
-			int id3 = (row + 1) * _width +col;
-			int id4 = (row + 1) * _width +col + 1;
+	for(int row=0; row < levelHeight-1; row++){
+		for(int col=0; col < levelWidth-1; col++){
+			int id1 = row * levelWidth + col;
+			int id2 = row * levelWidth + col + 1;
+			int id3 = (row + 1) * levelWidth +col;
+			int id4 = (row + 1) * levelWidth +col + 1;
 
 			if(ValidFace(vertices,id1,id2,id3,edgeThreshold)){
 				faces.push_back(Vector3i(id1,id2,id3));
@@ -300,7 +324,7 @@ bool Frame::writeMesh(vector<Vertex>& vertices, const string& filename){
 	outFile << "# X Y Z R G B A" << std::endl;
 
     //save vertices
-    for(auto idx = 0; idx < _height * _width ; ++idx){
+    for(auto idx = 0; idx < levelHeight * levelWidth ; ++idx){
 		if(vertices[idx].position.x() == MINF){
 			outFile << 0.0 << " " << 0.0 << " " << 0.0 << " "
                      << 255 << " " << 255 << " " << 255 << " " << 255 << endl;
@@ -333,8 +357,6 @@ bool Frame::writeMesh(vector<Vertex>& vertices, const string& filename){
 	return true;
 
 
-
-    return true;
 
 }
 
@@ -372,21 +394,181 @@ void Frame::buildColorPyramid(vector<Vector4uc>& originalMap, vector<vector<Vect
 
 
 Matrix3f Frame::getLevelCameraIntrinstics(unsigned int level){
-    if(level == 0){
-        return _depthIntrinsics;
+    
+    return _allDepthIntrinsic[level];
+}
+
+std::vector<Matrix3f> Frame::getLevelCameraIntrinstics(){
+    
+    return _allDepthIntrinsic;
+}
+
+std::vector<int> Frame::getLevelWidth(){
+    return _pyramidWidth;
+}
+
+std::vector<int> Frame::getLevelHeight(){
+    return _pyramidHeight;
+}
+vector<vector<Vertex>>  Frame::getPyramidVertex(bool icp_state){
+
+
+    for(unsigned int level = 0; level < _maxLevel; level++){
+        
+        auto levelHeight = _pyramidHeight[level];
+        auto levelWidth = _pyramidWidth[level];
+        float MAX_DISTANCE = 0.033f * 3.0f;
+        if(level == 0){
+            _pyramidDepthMap.push_back(_depthMap);
+        }else{
+            vector<float> tmpDepthMap = vector<float>(levelHeight * levelWidth);
+
+            for (int row = 0; row < _pyramidHeight[level-1] - 1; row += 2) {
+                for (int col = 0; col < _pyramidWidth[level-1] - 1; col += 2) {
+                    float centerPixel = _pyramidDepthMap[level-1][row * _pyramidWidth[level-1] + col];
+                    // previousDepthMap.get(row, col);= nextDepthMap.get(row / 2, col / 2);
+                    float newPixel; 
+
+                    if (centerPixel == MINF) {
+                        newPixel = MINF;
+                        continue;
+                    }
+
+                    int topNeighbourRow = row - 1;
+                    int leftNeighbourCol = col - 1;
+                    int numberOfPixels = 9;
+
+                    if (col == 0) {
+                        leftNeighbourCol = 0;
+                        numberOfPixels = 6;
+                    }
+                    if (row == 0){
+                        topNeighbourRow = 0;
+                        numberOfPixels = 6;
+                    }
+                    if (col == 0 && row == 0)
+                    {
+                        numberOfPixels = 4;
+                    }
+
+                    newPixel = 0;
+                    for (int neighbourRow = topNeighbourRow; neighbourRow <= row + 1; neighbourRow++) {
+                        for (int neighbourCol = leftNeighbourCol; neighbourCol <= col + 1; neighbourCol++) {
+                            float neighbourValue =  _pyramidDepthMap[level-1][neighbourRow * _pyramidWidth[level-1] + neighbourCol];
+                            if (std::abs(neighbourValue - centerPixel) > MAX_DISTANCE) {
+                                numberOfPixels--;
+                            } else {
+                                newPixel += neighbourValue;
+                            }
+                        }                 
+                    }
+                    newPixel /= numberOfPixels;
+                    tmpDepthMap.insert(tmpDepthMap.begin() + (row / 2) * levelWidth + col / 2, newPixel);
+
+                }
+            }
+
+            _pyramidDepthMap.push_back(tmpDepthMap);
+        }
+       
+
+
+        vector<Vertex> vertices(levelWidth * levelHeight);
+
+        float fX = _allDepthIntrinsic[level](0, 0);
+	    float fY = _allDepthIntrinsic[level](1, 1);
+	    float cX = _allDepthIntrinsic[level](0, 2);
+	    float cY = _allDepthIntrinsic[level](1, 2);
+
+        for(unsigned int row = 0; row < levelHeight; row++){
+            for(unsigned int col = 0; col < levelWidth; col++){
+                int idx = row * levelWidth + col;
+                float z = _pyramidDepthMap[level][idx]; 
+                Vector4f point_c, point_w;
+                Vector4uc color = _colorMap[idx];
+
+                if(z == MINF){
+                    point_w = Vector4f(MINF, MINF, MINF, MINF);
+                    color = Vector4uc(0,0,0,0);
+                }else{
+                    float u = col;
+                    float v = row;
+
+                    // Back-projection to camera space.
+                    float x = z*(u-cX)/fX; 
+                    float y = z*(v-cY)/fY; 
+                    
+                    //get the point in camera coordinate
+                    point_c = Vector4f(x, y, z, 1.0);
+
+                    //get the point in global coordinate/ world coordinate
+                    if(icp_state){
+                        point_w =  _depthExtrinsics.inverse() * point_c;          
+                    }
+                    else{
+                        point_w =  _trajectory.inverse() * _depthExtrinsics.inverse() * point_c;
+                    }
+                    
+
+                }
+                vertices[idx].color = color;
+                vertices[idx].position = point_w;
+            }
+        }
+        //compute normal, apply Principal Component Analysis
+        //1. search for points in the neighbourhood
+        //2. compute principal component
+        //3. normalize the norm
+        for(unsigned int row = 1; row < levelHeight - 1; row++){
+            for(unsigned int col = 1; col < levelWidth - 1; col++){
+                int idx = row * levelWidth + col;
+
+                //1. search for points in the neighbourhood
+                Vector4f point = vertices[idx].position;
+                Vector4f leftPoint = vertices[idx - 1].position;
+                Vector4f rightPoint = vertices[idx + 1].position;
+                Vector4f upperPoint = vertices[idx - levelWidth].position;
+                Vector4f lowerPoint = vertices[idx + levelWidth].position;
+
+                //2. compute principal component
+                Vector4f du =  vertices[idx + 1].position - vertices[idx - 1].position;
+                Vector4f dv =  vertices[idx + levelWidth].position - vertices[idx - levelWidth].position;
+
+                //we set normal to invalid when vertex are too far away from its neigbours
+                // if(!du.allFinite()||!dv.allFinite()||du.norm() >= _edgeThreshold||dv.norm() >= _edgeThreshold){
+                if(du.norm() >= _edgeThreshold||dv.norm() >= _edgeThreshold){
+                    vertices[idx].normal = Vector3f(MINF, MINF, MINF);
+                }
+                else{
+                    // getting the norm by cross product of two vectors made up of neighbours
+                    Vector3f normal = cross(du,dv);
+                    normal = normal.normalized();
+
+                    //3. normalize the norm
+                    vertices[idx].normal = normal;
+                }
+
+            }
+        }
+        for (int u = 0; u < levelWidth; ++u) {
+            vertices[u].normal = Vector3f(MINF, MINF, MINF);
+            vertices[u + (levelHeight - 1) * levelWidth].normal = Vector3f(MINF, MINF, MINF);
+        }
+
+        for (int v = 0; v < levelHeight; ++v) {
+            vertices[v * levelWidth].normal = Vector3f(MINF, MINF, MINF);
+            vertices[(levelWidth - 1) + v * levelWidth].normal = Vector3f(MINF, MINF, MINF);
+        }
+
+        _pyramidVertex.push_back(vertices);
+
     }
 
-    Matrix3f levelCameraIntrinstics{_depthIntrinsics};
+    
 
-    float scale = pow(0.5, level);
 
-    levelCameraIntrinstics(0,0) *= scale; // focal x
-    levelCameraIntrinstics(1,1) *= scale; // focal y
 
-    levelCameraIntrinstics(0,1) *= scale;  //axis skew (usually 0)
+    return _pyramidVertex;
 
-    levelCameraIntrinstics(0,2) *= scale; //principal point mx
-    levelCameraIntrinstics(1,2) *= scale; // principal point my
 
-    return levelCameraIntrinstics;
 }

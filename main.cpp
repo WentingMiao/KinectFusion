@@ -1,14 +1,18 @@
+
 #include <iostream>
 #include <fstream>
 #include <array>
 
-
 #include "VirtualSensor.h"
 #include "Eigen.h"
 #include "Frame.h"
+#include "Pose_estimation.h"
 
+#define USE_ICP 1
+// 1 if use icp to optimize pose
 
 int execute(){
+
 
     //path to the data 
     std::string filenameIn =  "../Data/rgbd_dataset_freiburg1_xyz/";
@@ -24,11 +28,11 @@ int execute(){
 		return -1;
     }
     
-    while(sensor.ProcessNextFrame()){
-    
-        Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
-        Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics();
-        Matrix4f trajectory = sensor.GetTrajectory();
+    sensor.ProcessNextFrame();
+
+    Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
+    Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics();
+    Matrix4f trajectory = sensor.GetTrajectory();
 
         BYTE* colorMap = &sensor.GetColorRGBX()[0];
         float* depthMap = &sensor.GetDepth()[0];
@@ -39,58 +43,102 @@ int execute(){
         bool filtered = false;
 
 
-        unsigned int levelSize = 3;
-        Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered, levelSize);
+    /*
+        configuration of pose estimation
+    */
+    Eigen::Matrix4f cur_pose = Matrix4f::Identity();
 
-        // vector<float> depthVectorMap = currentFrame.getDepthMap();
+    const float distance_threshold = 0.01f;
+    const float angle_threshold = 20.0f;
+    std::vector<int> num_iterations = std::vector<int>{ 10, 5, 4 }; // from last to front
+    const int max_level = 3;
+
+    Frame previousFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered, max_level);
+
+    vector<float> depthVectorMap = previousFrame.getDepthMap();
+
+    vector<vector<float>> depthPyramid;
+    // level 0 is large
+
+    previousFrame.buildDepthPyramid(depthVectorMap, depthPyramid, max_level);
+
+    vector<Vertex> vertices = previousFrame.getVertices(USE_ICP);
     
-        // vector<vector<float>> depthPyramid ;
+    
+    /*write to the mesh*/
+    stringstream ss;
+    ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
+    cout<<ss.str()<<endl;
+    if (!previousFrame.writeMesh(vertices,ss.str(),0)){
+            cout << "Failed to write mesh!\nCheck file path!" << endl;
+            return -1;
+    }
+    // Initialization completed (frame 0 finished)
 
+    // frame 1 start
+    while(sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 2){
+        Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
+        Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics();
+        Matrix4f trajectory = sensor.GetTrajectory();
+
+        BYTE* colorMap = &sensor.GetColorRGBX()[0];
+        float* depthMap = &sensor.GetDepth()[0];
+
+        unsigned int width  = sensor.GetDepthImageWidth();
+        unsigned int height = sensor.GetDepthImageHeight();
         
-        // currentFrame.buildDepthPyramid(depthVectorMap, depthPyramid, levelSize);
+        Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered, max_level);   
 
+        // currentFrame.buildDepthPyramid(depthVectorMap, depthPyramid, pyramid_level);
 
-        // vector<Vertex> vertices = currentFrame.getVertices();
+        Pose pose;
+        auto level_intrinsics = currentFrame.getLevelCameraIntrinstics();
+        auto level_current_vertices = currentFrame.getPyramidVertex(USE_ICP);
+        auto level_previous_vertices = previousFrame.getPyramidVertex(USE_ICP);
+        auto level_width = currentFrame.getLevelWidth();
+        auto level_height = currentFrame.getLevelHeight();
         
-        vector<vector<Vertex>> pyramidDepthMap = currentFrame.getPyramidVertex();
-        
-            
+        pose.pose_estimation(level_current_vertices,
+                             level_previous_vertices,
+                             level_intrinsics,
+                             distance_threshold,
+                             angle_threshold,
+                             num_iterations,
+                             level_width,
+                             level_height,
+                             max_level,
+                             cur_pose);            
+    
+        //get source vertex map (frame k)
+        vector<Vertex> vertices = currentFrame.getVertices(USE_ICP); 
 
+        for(auto it = vertices.begin(); it != vertices.end(); ++it){
+            it->position = pose.Vector3fToVector4f(pose.TransformToVertex(pose.Vector4fToVector3f(it->position),cur_pose));
+        }        
+        
         /*write to the mesh*/
-        // stringstream ss;
-        // ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << "_LL1"<<".off";
-        // cout<<ss.str()<<endl;
-        // if (!currentFrame.writeMesh(pyramidDepthMap[1],ss.str(),1)){
-        // 		cout << "Failed to write mesh!\nCheck file path!" << endl;
-        // 		return -1;
-        // }
-
-
-        for(unsigned int level = 0; level < levelSize; level++){
-            stringstream ss;
-            ss << filenameBaseOut << sensor.GetCurrentFrameCnt() <<"Level"<< level<< "_test"<<".off";
-            cout<<ss.str()<<endl;
-            if (!currentFrame.writeMesh(pyramidDepthMap[level],ss.str(),level)){
-                    cout << "Failed to write mesh!\nCheck file path!" << endl;
-                    return -1;
-            }
+        stringstream ss;
+        ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
+        cout<<ss.str()<<endl;
+        if (!currentFrame.writeMesh(vertices,ss.str(),0)){
+                cout << "Failed to write mesh!\nCheck file path!" << endl;
+                return -1;
         }
-        
 
-
+        previousFrame = currentFrame;
 
     }
     
-
-    return 0;
+    return 0;   
 }
 
 
 int main(){
     
     int res;
-    
     res = execute();
+
+    
 
     return res;
 }
