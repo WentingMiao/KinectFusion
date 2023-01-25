@@ -113,6 +113,7 @@ int execute(){
         vector<Vertex> vertices = currentFrame.getVertices(USE_ICP); 
 
         for(auto it = vertices.begin(); it != vertices.end(); ++it){
+            if(it->position.x() == MINF) continue;
             it->position = pose.Vector3fToVector4f(pose.TransformToVertex(pose.Vector4fToVector3f(it->position),cur_pose));
         }        
         
