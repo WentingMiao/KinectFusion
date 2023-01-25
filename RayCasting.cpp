@@ -1,19 +1,21 @@
 #include "RayCasting.h"
 
 std::array<FreeImage, 2> RayCasting::SurfacePrediction() {
-    FreeImage rgba{_width, _height, 4};
-    FreeImage depth{_width, _height, 1};
-    for (unsigned row = 0; row < _height; ++row)
-        for (unsigned col = 0; col < _width; ++col)
+    unsigned width = _width;
+    unsigned height = _height;
+    FreeImage rgba{width, height, 4};
+    FreeImage depth{width, height, 1};
+    for (unsigned row = 0; row < height; ++row)
+        for (unsigned col = 0; col < width; ++col)
         {
             Vertex ret = CastPixel(row, col);
-            rgba.data[4 * (_width * row + col)] = ret.color(0);
-            rgba.data[4 * (_width * row + col) + 1] = ret.color(1);
-            rgba.data[4 * (_width * row + col) + 2] = ret.color(2);
-            rgba.data[4 * (_width * row + col) + 3] = ret.color(3);
-            depth.data[_width * row + col] = ret.depth;
+            rgba.data[4 * (width * row + col)] = ret.color(0);
+            rgba.data[4 * (width * row + col) + 1] = ret.color(1);
+            rgba.data[4 * (width * row + col) + 2] = ret.color(2);
+            rgba.data[4 * (width * row + col) + 3] = ret.color(3);
+            depth.data[width * row + col] = ret.depth;
             if (ret.depth == MINF)
-                depth.data[_width * row + col] = 0;
+                depth.data[width * row + col] = 0;
         }
     return std::array<FreeImage, 2>{rgba, depth};
 }

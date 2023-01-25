@@ -20,7 +20,7 @@ if(WIN32)
 endif(WIN32)
 
 # Set C++ flags
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 20)
 
 #find required packages 
 find_package(Eigen3 REQUIRED)
@@ -33,6 +33,9 @@ set(HEADERS
     FreeImageHelper.h
     VirtualSensor.h
     Frame.h
+    Pose_estimation.h
+    SimpleMesh.h 
+    PointCloud.h     
     Voxels.h
     RayCasting.h
 )
@@ -41,6 +44,7 @@ set(SOURCES
     main.cpp
     FreeImageHelper.cpp
     Frame.cpp
+    Pose_estimation.cpp
     Voxels.cpp
     RayCasting.cpp
 )
@@ -54,7 +58,7 @@ include_directories( ${OpenCV_INCLUDE_DIRS})
 
 add_executable(KinectFusion ${HEADERS} ${SOURCES})
 target_include_directories(KinectFusion PUBLIC ${EIGEN3_INCLUDE_DIR} ${FreeImage_INCLUDE_DIR} ${OpenCV_INCLUDE_DIR})
-target_link_libraries(KinectFusion general Eigen3::Eigen freeimage ${OpenCV_LIBS})
+target_link_libraries(KinectFusion general Eigen3::Eigen freeimage ${OpenCV_LIBS} tbb)
 
 
 
