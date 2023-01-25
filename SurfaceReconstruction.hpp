@@ -2,6 +2,7 @@
 
 #include "Frame.h"
 #include <memory>
+#include "Voxels.h"
 
 class Fusion {
 public:
@@ -13,8 +14,8 @@ public:
         * @param truncationDistance:
         * 
     */
-		bool SurfaceReconstruction(const std::shared_ptr<Frame>& cur_Frame, 
-								   const std::shared_ptr<VoxelArray>& volume,
+		bool SurfaceReconstruction(Frame& cur_Frame, 
+								  VoxelArray& volume,
 								   const Eigen::Matrix4f& _pose,
                                    double truncationDistance);
 
