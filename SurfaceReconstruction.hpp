@@ -17,13 +17,14 @@ public:
 		bool SurfaceReconstruction(Frame& cur_Frame, 
 								  VoxelArray& volume,
 								   const Eigen::Matrix4f& _pose,
-                                   double truncationDistance);
+                                   float truncationDistance);
 
     private:
-        Eigen::Vector3d grid2world(int& x, int& y, int& z, float voxelSize);
-        Eigen::Vector2i project2Camera(Eigen::Vector3d& cam_position, Eigen::Matrix3f& Intrinsics);
+        Eigen::Vector3f grid2world(int& x, int& y, int& z, int voxelSize);
+		//Eigen::Vector3d grid2world(int& x, int& y, int& z, float voxelSize);
+        Eigen::Vector2i project2Camera(Eigen::Vector3f& cam_position, Eigen::Matrix3f& Intrinsics);
         float cal_Lamda(Eigen::Vector2i& uv, Eigen::Matrix3f& Intrinsics);
-        float cal_SDF(const float&lambda, Eigen::Vector3d& camera_pos, float depth);
+        float cal_SDF(const float&lambda, Eigen::Vector3f& camera_pos, float depth);
 
 
 };
