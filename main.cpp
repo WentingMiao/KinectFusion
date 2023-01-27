@@ -115,7 +115,13 @@ int execute(){
         for(auto it = vertices.begin(); it != vertices.end(); ++it){
             it->position = pose.Vector3fToVector4f(pose.TransformToVertex(pose.Vector4fToVector3f(it->position),cur_pose));
         }        
+	    
+	//surface reconstruction
+	VoxelArray volume(std::array<unsigned, 3>{600, 600, 600},0.05, Vector3f{ -3, -3, 0 }, Matrix4f{});
         
+	Fusion fusion;
+	fusion.SurfaceReconstruction(currentFrame, volume, cur_pose, truncationDistance);
+
         /*write to the mesh*/
         stringstream ss;
         ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
