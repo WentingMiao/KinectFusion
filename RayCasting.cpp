@@ -1,50 +1,31 @@
 #include "RayCasting.h"
 
-std::array<FreeImage, 2> RayCasting::SurfacePrediction() {
+std::tuple<std::unique_ptr<float>, std::unique_ptr<BYTE>> RayCasting::SurfacePrediction() {
     unsigned width = _width;
     unsigned height = _height;
-    FreeImage rgba{width, height, 4};
-    FreeImage depth{width, height, 1};
+    std::unique_ptr<float> depth{new float[width * height]};
+    std::unique_ptr<BYTE> rgba{new BYTE[width * height]};
     for (unsigned row = 0; row < height; ++row)
         for (unsigned col = 0; col < width; ++col)
         {
             Vertex ret = CastPixel(row, col);
-            rgba.data[4 * (width * row + col)] = ret.color(0);
-            rgba.data[4 * (width * row + col) + 1] = ret.color(1);
-            rgba.data[4 * (width * row + col) + 2] = ret.color(2);
-            rgba.data[4 * (width * row + col) + 3] = ret.color(3);
-            depth.data[width * row + col] = ret.depth;
-            if (ret.depth == MINF)
-                depth.data[width * row + col] = 0;
+            rgba.get()[4 * (width * row + col)] = ret.color(0);
+            rgba.get()[4 * (width * row + col) + 1] = ret.color(1);
+            rgba.get()[4 * (width * row + col) + 2] = ret.color(2);
+            rgba.get()[4 * (width * row + col) + 3] = ret.color(3);
+            depth.get()[width * row + col] = ret.depth;
+            // if (ret.depth == MINF)
+            //     depth.data[width * row + col] = 0;
         }
-    return std::array<FreeImage, 2>{rgba, depth};
-}
-
-
-Vector4f RayCasting::Pixel2World(unsigned int x, unsigned int y)
-{
-    float fX = 525.0f;
-    float fY = 525.0f;
-    float cX = 319.5f;
-    float cY = 239.5f;
-    float z = 1; // value of z doesn't matter
-    return _Pose * Vector4f{z * (x - cX) / fX, z * (y - cY) / fY, z, 1.f};
+    return std::make_tuple(std::move(depth), std::move(rgba));
 }
 
 Vertex RayCasting::CastPixel(const unsigned x, const unsigned y)
 {
-    /*
-    Building Ray:
-        transform origin and (x, y, 1) into world coordinate
-    Surface prediction:
-        step() until meet surface or end
-        if meet surface -> location prediction, return vertex
-    */
     Ray r{tsdf.Camera2World(Vector4f{0, 0, 0, 0}), Pixel2World(x, y), tsdf.getGridlen() / 2, 0.0f};
     Vector4f lastLocation;
     Vector4f currLocation;
     while (tsdf.isValidLocation(r.getLocation())) 
-    // TODO: is valid distance
     {
         lastLocation = currLocation;
         currLocation = r.getLocation();
@@ -54,24 +35,6 @@ Vertex RayCasting::CastPixel(const unsigned x, const unsigned y)
             r.step();
     }
     return Vertex{};
-}
-
-Vector4uc uc_subtraction(const Vector4uc &a, const Vector4uc &b)
-{
-    Vector4uc tmp{a(0) - b(0), a(1) - b(1), a(2) - b(2), a(3) - b(3)};
-    return tmp;
-}
-
-Vector4uc uc_addition(const Vector4uc &a, const Vector4uc &b)
-{
-    Vector4uc tmp{static_cast<u_char>(a(0) + b(0)), static_cast<u_char>(a(1) + b(1)), static_cast<u_char>(a(2) + b(2)), static_cast<u_char>(a(3) + b(3))};
-    return tmp;
-}
-
-Vector4uc uc_elementwise_mult(float a, const Vector4uc &b)
-{
-    Vector4uc tmp{static_cast<u_char>(a * b(0)), static_cast<u_char>(a * b(1)), static_cast<u_char>(a * b(2)), static_cast<u_char>(a * b(3))};
-    return tmp;
 }
 
 Vertex RayCasting::interpolation(const Ray& r, const Vector4f &loc1, const Vector4f &loc2)
@@ -98,6 +61,38 @@ Vertex RayCasting::interpolation(const Ray& r, const Vector4f &loc1, const Vecto
                 tsdf.GetColorVal(loc2))));
     return Vertex{est_location, color, depth};
 }
+
+Vector4f RayCasting::Pixel2World(unsigned int x, unsigned int y)
+{
+    float fX = 525.0f;
+    float fY = 525.0f;
+    float cX = 319.5f;
+    float cY = 239.5f;
+    float z = 1; // value of z doesn't matter
+    return _Pose * Vector4f{z * (x - cX) / fX, z * (y - cY) / fY, z, 1.f};
+}
+
+
+
+Vector4uc uc_subtraction(const Vector4uc &a, const Vector4uc &b)
+{
+    Vector4uc tmp{a(0) - b(0), a(1) - b(1), a(2) - b(2), a(3) - b(3)};
+    return tmp;
+}
+
+Vector4uc uc_addition(const Vector4uc &a, const Vector4uc &b)
+{
+    Vector4uc tmp{static_cast<u_char>(a(0) + b(0)), static_cast<u_char>(a(1) + b(1)), static_cast<u_char>(a(2) + b(2)), static_cast<u_char>(a(3) + b(3))};
+    return tmp;
+}
+
+Vector4uc uc_elementwise_mult(float a, const Vector4uc &b)
+{
+    Vector4uc tmp{static_cast<u_char>(a * b(0)), static_cast<u_char>(a * b(1)), static_cast<u_char>(a * b(2)), static_cast<u_char>(a * b(3))};
+    return tmp;
+}
+
+
 
 Vector4f RayCasting::Ray::getLocation()
 {

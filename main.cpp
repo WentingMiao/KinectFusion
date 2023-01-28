@@ -7,13 +7,35 @@
 #include "Frame.h"
 #include "Voxels.h"
 #include "Pose_estimation.h"
+#include "SurfaceReconstruction.hpp"
+#include "RayCasting.h"
 
 #define USE_ICP 1
 // 1 if use icp to optimize pose
 
+/*
+Suggestions from Shuze
+1. 减少while循环里定义的类对象
+    （比如frame中不会变的尺寸等参数传入构造函数；一个函数负责接收图片产生vertice pyramid）
+    （比如无需保存变量的Fusion类可以变成Fusion namespace）
+2. 需要更多封装以令各模块简洁
+    理想：
+    int main() {
+        init();
+        while (condition) {
+            projection();
+            pose estimation();
+            volume integration();
+            ray casting();
+        }
+        return 0;
+    }
+3. 合并冗余函数
+    例如转换Camera与World coordinate的函数（可以独立成类专门保存内外参、负责转换）
+4. 避免局部变量保存配置参数
+    (用宏#DEFINE 比局部变量更清晰、更易于更改)
+*/
 int execute(){
-
-
     //path to the data 
     std::string filenameIn =  "../Data/rgbd_dataset_freiburg1_xyz/";
 
@@ -62,19 +84,8 @@ int execute(){
 
     previousFrame.buildDepthPyramid(depthVectorMap, depthPyramid, max_level);
 
-    vector<Vertex> vertices = previousFrame.getVertices(USE_ICP);
-    
-    
-    /*write to the mesh*/
-    stringstream ss;
-    ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
-    cout<<ss.str()<<endl;
-    if (!previousFrame.writeMesh(vertices,ss.str(),0)){
-            cout << "Failed to write mesh!\nCheck file path!" << endl;
-            return -1;
-    }
+    // vector<Vertex> vertices = previousFrame.getVertices(USE_ICP);
     // Initialization completed (frame 0 finished)
-
     // frame 1 start
     while(sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 2){
         Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
@@ -86,7 +97,6 @@ int execute(){
 
         unsigned int width  = sensor.GetDepthImageWidth();
         unsigned int height = sensor.GetDepthImageHeight();
-        
         Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered, max_level);   
 
         // currentFrame.buildDepthPyramid(depthVectorMap, depthPyramid, pyramid_level);
@@ -95,6 +105,7 @@ int execute(){
         auto level_intrinsics = currentFrame.getLevelCameraIntrinstics();
         auto level_current_vertices = currentFrame.getPyramidVertex(USE_ICP);
         auto level_previous_vertices = previousFrame.getPyramidVertex(USE_ICP);
+        previousFrame = currentFrame;
         auto level_width = currentFrame.getLevelWidth();
         auto level_height = currentFrame.getLevelHeight();
         
@@ -107,34 +118,45 @@ int execute(){
                              level_width,
                              level_height,
                              max_level,
-                             cur_pose);            
+                             cur_pose);
     
         //get source vertex map (frame k)
         vector<Vertex> vertices = currentFrame.getVertices(USE_ICP); 
 
-        for(auto it = vertices.begin(); it != vertices.end(); ++it){
-            it->position = pose.Vector3fToVector4f(pose.TransformToVertex(pose.Vector4fToVector3f(it->position),cur_pose));
-        }        
+        for(auto it = vertices.begin(); it != vertices.end(); ++it)
+            if(it->position.x() != MINF)
+                it->position = pose.Vector3fToVector4f(pose.TransformToVertex(pose.Vector4fToVector3f(it->position),cur_pose));
 	    
-	//surface reconstruction
-	VoxelArray volume(std::array<unsigned, 3>{600, 600, 600},0.05, Vector3f{ -3, -3, 0 }, Matrix4f{});
+	    //surface reconstruction
+	    VoxelArray volume(std::array<unsigned, 3>{200, 200, 200}, 0.5, Vector3f{-3, -3, 0}, cur_pose);
+
+	    Fusion fusion;
+        float truncationDistance = 2;
+	    fusion.SurfaceReconstruction(currentFrame, volume, cur_pose, truncationDistance);
         
-	Fusion fusion;
-	fusion.SurfaceReconstruction(currentFrame, volume, cur_pose, truncationDistance);
+        // ray casting
+        RayCasting cast{width, height, cur_pose, volume};
+        auto imgs = cast.SurfacePrediction();
+        // saved in a more global variable so that it can be transformed into pyramid in the next loop
+        auto depth = std::move(std::get<0>(imgs));
+        auto rgbd = std::move(std::get<1>(imgs));
+
+        // testing only begin
+        FreeImageB rgbdimg{width, height};
+        rgbdimg.data = std::move(rgbd).get();
+        rgbdimg.SaveImageToFile("../results/rgbd" + std::to_string(sensor.GetCurrentFrameCnt()) + ".png");
+        FreeImage depthimg{width, height, 1};
+        depthimg.data = std::move(depth).get();
+        depthimg.SaveImageToFile("../results/depth" + std::to_string(sensor.GetCurrentFrameCnt()) + ".png");
+        // testing only end
 
         /*write to the mesh*/
         stringstream ss;
         ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
         cout<<ss.str()<<endl;
-        if (!currentFrame.writeMesh(vertices,ss.str(),0)){
-                cout << "Failed to write mesh!\nCheck file path!" << endl;
-                return -1;
-        }
-
-        previousFrame = currentFrame;
-
+        if (!currentFrame.writeMesh(vertices,ss.str(),0))
+            throw std::runtime_error("Failed to write mesh!\nCheck file path!");
     }
-    
     return 0;   
 }
 
@@ -143,8 +165,5 @@ int main(){
     
     int res;
     res = execute();
-
-    
-
     return res;
 }

@@ -38,6 +38,7 @@ set(HEADERS
     PointCloud.h     
     Voxels.h
     RayCasting.h
+    SurfaceReconstruction.hpp
 )
 
 set(SOURCES
@@ -47,6 +48,7 @@ set(SOURCES
     Pose_estimation.cpp
     Voxels.cpp
     RayCasting.cpp
+    SurfaceReconstruction.cpp
 )
 
 
@@ -58,7 +60,7 @@ include_directories( ${OpenCV_INCLUDE_DIRS})
 
 add_executable(KinectFusion ${HEADERS} ${SOURCES})
 target_include_directories(KinectFusion PUBLIC ${EIGEN3_INCLUDE_DIR} ${FreeImage_INCLUDE_DIR} ${OpenCV_INCLUDE_DIR})
-target_link_libraries(KinectFusion general Eigen3::Eigen freeimage ${OpenCV_LIBS} tbb)
+target_link_libraries(KinectFusion general Eigen3::Eigen freeimage ${OpenCV_LIBS})
 
 
 

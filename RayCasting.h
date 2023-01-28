@@ -2,6 +2,7 @@
 #include "Frame.h"
 #include "FreeImageHelper.h"
 #include <array>
+#include <tuple>
 #include <memory>
 #include "Voxels.h"
 /*
@@ -11,17 +12,18 @@ Ray casting module:
         TSDF is in world coordinate
         Volume integration integrate points of world coord into tsdf
         Ray casting should predict an image from of "predicted camera" from last pose
-            by generate a ray for each pixel ()
 
     use:
-    RayCasting cast{size_t width, size_t height, unsigned numPyramid, const Eigen::Matrix4f &Pose, VoxelArray &tsdf_arr};
-    std::vector<Vertex> vertices = cast.SurfacePrediction();
-    cast.
+    RayCasting cast{size_t width, size_t height, const Eigen::Matrix4f &Pose, VoxelArray &tsdf_arr};
+    auto imgs = cast.SurfacePrediction();
 
     TODO: support search distance limit!!!
-    0. implement pyramid
-        ray cast once, generate rgb and depth image, which then fed into build pyramid process
-    1. visualize tsdf using K3d
+
+    meeting
+    0. 代码在干嘛？
+    1. lambda在干嘛？
+    2. 如何可视化？
+    3. 重构代码？
 */
 
 // unsigned char manipulation functions
@@ -34,7 +36,7 @@ class RayCasting
 public:
     inline RayCasting(size_t width, size_t height, const Eigen::Matrix4f &Pose, VoxelArray &tsdf_arr) : _width(width), _height(height), _Pose(Pose), tsdf{tsdf_arr} 
     {}
-    std::array<FreeImage, 2> SurfacePrediction(); // get surface location
+    std::tuple<std::unique_ptr<float>, std::unique_ptr<BYTE>> SurfacePrediction(); // get surface location
 private:
     Vector4f Pixel2World(unsigned int x, unsigned int y);                           // transform pixel location to world location
     Vertex CastPixel(const unsigned x, const unsigned y);                           // obtain the vertex corresponding to pixel
@@ -51,13 +53,13 @@ private:
         {
             _distance += _step_size;
         }
-
         float _step_size;
         float _distance;
         Vector3f _origin;
         Vector3f _direction;
     };
-    Vertex interpolation(const Ray& r, const Vector4f &loc1, const Vector4f &loc2); // linear interpolation to obtain color and location of vertex
+    // linear interpolation to obtain color and location of vertex
+    Vertex interpolation(const Ray& r, const Vector4f &loc1, const Vector4f &loc2); 
     const size_t _width;
     const size_t _height;
     Matrix4f _Pose;

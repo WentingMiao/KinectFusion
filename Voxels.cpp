@@ -97,6 +97,7 @@ float VoxelArray::GetSDFVal(const Vector4f& location) const
     unsigned idx = location2idx(location);
     return voxel[idx].sdf;
 }
+
 Vector4uc VoxelArray::GetColorVal(const Vector4f& location) const
 {
     unsigned idx = location2idx(location);

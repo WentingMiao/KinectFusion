@@ -2,7 +2,6 @@
 #include "Frame.h"
 #include "Eigen.h"
 #include "vector"
-// #define DEBUG
 /*
 TODO: world与camera坐标转换如果常用可以独立成camera类
 */
@@ -61,15 +60,19 @@ public:
     virtual float GetWeightVal(const Vector4f &location) const override;
     virtual float GetSDFVal(const Vector4f &location) const override;
     virtual Vector4uc GetColorVal(const Vector4f &location) const override;
-
-#ifndef DEBUG
-private:
-#endif
-    unsigned location2idx(const Vector4f &location) const; // world location to voxel index
+    
+    /* location manipulation*/
+    // world location to voxel index
+    unsigned location2idx(const Vector4f &location) const; 
+    // voxel index to world location
     Vector4f idx2location(const unsigned idx) const;
+    // xyz to world location
     Vector4f xyz2location(const unsigned x, const unsigned y, const unsigned z) const;
+    // xyz to index
     unsigned xyz2idx(const unsigned x, const unsigned y, const unsigned z) const;
+    // index to xyz
     std::array<unsigned, 3> idx2xyz(const unsigned idx) const;
+private:
     Vector3f _origin;                                      // corner of grid , {-3, -3, 0} may be appropriate
     std::array<unsigned, 3> _size;                         // number of voxel on xyz dimension
     Matrix<float, 3, 2> _valid_location_range;             // valid range of world location

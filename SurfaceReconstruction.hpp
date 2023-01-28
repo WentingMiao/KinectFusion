@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Frame.h"
 #include <memory>
 #include "Voxels.h"
@@ -21,8 +20,6 @@ public:
         Eigen::Vector2i project2Camera(Eigen::Vector3f& cam_position, Eigen::Matrix3f& Intrinsics);
         float cal_Lamda(Eigen::Vector2i& uv, Eigen::Matrix3f& Intrinsics);
         float cal_SDF(const float&lambda, Eigen::Vector3f& camera_pos, float depth);
-
-
 };
 
 

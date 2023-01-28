@@ -147,48 +147,10 @@ void Pose::outlier_check(const std::vector<Vertex>& frame_data,
 
     // version 1: with parallel
 
-    std::for_each(std::execution::par_unseq, matches.begin(), matches.end(), [&](const auto& m) {
+    // std::for_each(std::execution::par_unseq, matches.begin(), matches.end(), [&](const auto& m) {
 
-        int cur_idx = m.first;
-        int prv_idx = m.second;
-
-        Vector3f current_global_vertex = TransformToVertex(Vector4fToVector3f(frame_data[cur_idx].position), m_current_pose);
-        Vector3f current_global_normal = TransformToNormal(frame_data[cur_idx].normal, m_current_pose); 
-        Vector3f previous_global_vertex = TransformToVertex(Vector4fToVector3f(model_data[prv_idx].position), m_previous_pose);
-        Vector3f previous_global_normal = TransformToNormal(model_data[prv_idx].normal, m_previous_pose);
-
-        // avoid redundant caculation to speed up 
-        if (!isnan(current_global_vertex[0]) && !isnan(current_global_vertex[1]) && !isnan(current_global_vertex[2]) &&
-            !isnan(previous_global_vertex[0]) && !isnan(previous_global_vertex[1]) && !isnan(previous_global_vertex[2]) &&
-            current_global_vertex[0] != MINF && current_global_vertex[1] != MINF && current_global_vertex[2] != MINF &&
-            previous_global_vertex[0] != MINF && previous_global_vertex[1] != MINF && previous_global_vertex[2] != MINF &&
-            !isnan(previous_global_normal[0]) && !isnan(previous_global_normal[1]) && !isnan(previous_global_normal[2]) &&
-            previous_global_normal[0] != MINF && previous_global_normal[1] != MINF && previous_global_normal[2] != MINF){
-
-            //caculate norm
-            const float distance = (previous_global_vertex - current_global_vertex).norm();
-            
-            // std::cout << distance << std::endl;
-            if (distance <= distance_threshold){
-
-                auto normal_angle = acos(previous_global_normal.dot(current_global_normal) / 
-                (previous_global_normal.norm() * current_global_normal.norm()));
-                normal_angle = normal_angle * 180/PI;
-                if(normal_angle < angle_threshold){
-                    std::lock_guard<std::mutex> guard(mut);
-                    selected_matches.insert(std::pair<int, int>(cur_idx, prv_idx));  
-                    error += distance;
-                }
-            }
-        }
-    });    
-
-    // version 2: without parallel
-
-    // for(auto it = matches.begin(); it != matches.end(); ++it){
-
-    //     int cur_idx = it->first;
-    //     int prv_idx = it->second;
+    //     int cur_idx = m.first;
+    //     int prv_idx = m.second;
 
     //     Vector3f current_global_vertex = TransformToVertex(Vector4fToVector3f(frame_data[cur_idx].position), m_current_pose);
     //     Vector3f current_global_normal = TransformToNormal(frame_data[cur_idx].normal, m_current_pose); 
@@ -199,8 +161,8 @@ void Pose::outlier_check(const std::vector<Vertex>& frame_data,
     //     if (!isnan(current_global_vertex[0]) && !isnan(current_global_vertex[1]) && !isnan(current_global_vertex[2]) &&
     //         !isnan(previous_global_vertex[0]) && !isnan(previous_global_vertex[1]) && !isnan(previous_global_vertex[2]) &&
     //         current_global_vertex[0] != MINF && current_global_vertex[1] != MINF && current_global_vertex[2] != MINF &&
-    //         previous_global_vertex[0] != MINF && previous_global_vertex[1] != MINF && previous_global_vertex[2] != MINF
-    //         && !isnan(previous_global_normal[0]) && !isnan(previous_global_normal[1]) && !isnan(previous_global_normal[2]) &&
+    //         previous_global_vertex[0] != MINF && previous_global_vertex[1] != MINF && previous_global_vertex[2] != MINF &&
+    //         !isnan(previous_global_normal[0]) && !isnan(previous_global_normal[1]) && !isnan(previous_global_normal[2]) &&
     //         previous_global_normal[0] != MINF && previous_global_normal[1] != MINF && previous_global_normal[2] != MINF){
 
     //         //caculate norm
@@ -213,13 +175,51 @@ void Pose::outlier_check(const std::vector<Vertex>& frame_data,
     //             (previous_global_normal.norm() * current_global_normal.norm()));
     //             normal_angle = normal_angle * 180/PI;
     //             if(normal_angle < angle_threshold){
-    //                 // std::lock_guard<std::mutex> guard(mut);
+    //                 std::lock_guard<std::mutex> guard(mut);
     //                 selected_matches.insert(std::pair<int, int>(cur_idx, prv_idx));  
     //                 error += distance;
     //             }
     //         }
     //     }
-    // }    
+    // });    
+
+    // version 2: without parallel
+
+    for(auto it = matches.begin(); it != matches.end(); ++it){
+
+        int cur_idx = it->first;
+        int prv_idx = it->second;
+
+        Vector3f current_global_vertex = TransformToVertex(Vector4fToVector3f(frame_data[cur_idx].position), m_current_pose);
+        Vector3f current_global_normal = TransformToNormal(frame_data[cur_idx].normal, m_current_pose); 
+        Vector3f previous_global_vertex = TransformToVertex(Vector4fToVector3f(model_data[prv_idx].position), m_previous_pose);
+        Vector3f previous_global_normal = TransformToNormal(model_data[prv_idx].normal, m_previous_pose);
+
+        // avoid redundant caculation to speed up 
+        if (!isnan(current_global_vertex[0]) && !isnan(current_global_vertex[1]) && !isnan(current_global_vertex[2]) &&
+            !isnan(previous_global_vertex[0]) && !isnan(previous_global_vertex[1]) && !isnan(previous_global_vertex[2]) &&
+            current_global_vertex[0] != MINF && current_global_vertex[1] != MINF && current_global_vertex[2] != MINF &&
+            previous_global_vertex[0] != MINF && previous_global_vertex[1] != MINF && previous_global_vertex[2] != MINF
+            && !isnan(previous_global_normal[0]) && !isnan(previous_global_normal[1]) && !isnan(previous_global_normal[2]) &&
+            previous_global_normal[0] != MINF && previous_global_normal[1] != MINF && previous_global_normal[2] != MINF){
+
+            //caculate norm
+            const float distance = (previous_global_vertex - current_global_vertex).norm();
+            
+            // std::cout << distance << std::endl;
+            if (distance <= distance_threshold){
+
+                auto normal_angle = acos(previous_global_normal.dot(current_global_normal) / 
+                (previous_global_normal.norm() * current_global_normal.norm()));
+                normal_angle = normal_angle * 180/PI;
+                if(normal_angle < angle_threshold){
+                    // std::lock_guard<std::mutex> guard(mut);
+                    selected_matches.insert(std::pair<int, int>(cur_idx, prv_idx));  
+                    error += distance;
+                }
+            }
+        }
+    }    
 }
 
 void Pose::incremental_caculation   (const std::vector<Vertex>& frame_data,
@@ -246,26 +246,9 @@ void Pose::incremental_caculation   (const std::vector<Vertex>& frame_data,
 
         // version 1: with parallel
 
-        std::for_each(std::execution::par_unseq, selected_matches.begin(), selected_matches.end(), [&](const auto& it){
-            auto source_idx = it.first;
-            auto target_idx = it.second;            
-            // Note that sourcePoint always in camera space
-            s  = TransformToVertex(Vector4fToVector3f(frame_data[source_idx].position),m_current_pose);
-            d  = TransformToVertex(Vector4fToVector3f(model_data[target_idx].position),m_previous_pose);
-            n  = TransformToNormal(model_data[target_idx].normal,m_previous_pose);
-            A.block<1, 3>(i, 0) = s.cross(n).transpose();
-            A.block<1, 3>(i, 3) = n.transpose();
-            // part of point2plane, copied from paper
-            b(i) = (d - s).dot(n);
-            ++i;
-            // ICP incremental caculate
-        });
-
-        // version 2: without parallel
-
-        // for(auto it = selected_matches.begin(); it != selected_matches.end(); ++it){
-        //     auto source_idx = it->first;
-        //     auto target_idx = it->second;            
+        // std::for_each(std::execution::par_unseq, selected_matches.begin(), selected_matches.end(), [&](const auto& it){
+        //     auto source_idx = it.first;
+        //     auto target_idx = it.second;            
         //     // Note that sourcePoint always in camera space
         //     s  = TransformToVertex(Vector4fToVector3f(frame_data[source_idx].position),m_current_pose);
         //     d  = TransformToVertex(Vector4fToVector3f(model_data[target_idx].position),m_previous_pose);
@@ -276,15 +259,30 @@ void Pose::incremental_caculation   (const std::vector<Vertex>& frame_data,
         //     b(i) = (d - s).dot(n);
         //     ++i;
         //     // ICP incremental caculate
-        // }
+        // });
+
+        // version 2: without parallel
+
+        for(auto it = selected_matches.begin(); it != selected_matches.end(); ++it){
+            auto source_idx = it->first;
+            auto target_idx = it->second;            
+            // Note that sourcePoint always in camera space
+            s  = TransformToVertex(Vector4fToVector3f(frame_data[source_idx].position),m_current_pose);
+            d  = TransformToVertex(Vector4fToVector3f(model_data[target_idx].position),m_previous_pose);
+            n  = TransformToNormal(model_data[target_idx].normal,m_previous_pose);
+            A.block<1, 3>(i, 0) = s.cross(n).transpose();
+            A.block<1, 3>(i, 3) = n.transpose();
+            // part of point2plane, copied from paper
+            b(i) = (d - s).dot(n);
+            ++i;
+            // ICP incremental caculate
+        }
 
         
         MatrixXf ATA = A.transpose() * A;
         MatrixXf ATb = A.transpose() * b;
         VectorXf x(6);
         x = ATA.ldlt().solve(ATb);
-        // x = A.bdcSvd(ComputeThinU | ComputeThinV).solve(b);
-        // x = A.fullPivLu().solve(b);
 
         float alpha = x(0), beta = x(1), gamma = x(2);
 

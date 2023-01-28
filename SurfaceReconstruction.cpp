@@ -33,11 +33,11 @@ bool Fusion::SurfaceReconstruction(
     for (int z = 0; z < volumeSize[2]; z++) { //size(x, y, z)
         for (int y = 0; y < volumeSize[1]; y++) {
             for (int x = 0; x < volumeSize[0]; x++) {
-				
                 //step2.1:voxel position in the world coordinates
-		Eigen::Vector3f position =  grid2world(x, y, z, voxelScale);
-		//3 dim -> 4 dim
-		Vector4f location = volume.xyz2location(position[0], position[1], position[2]); 
+		        Eigen::Vector3f position =  grid2world(x, y, z, voxelScale);
+		        //3 dim -> 4 dim
+                //可能有点误会
+		        Vector4f location = volume.xyz2location(position[0], position[1], position[2]); 
 
 		//step2.2:world coordinates -> camera coordinates
                 Eigen::Matrix3f rotation = pose.block(0, 0, 3, 3);
@@ -91,7 +91,7 @@ bool Fusion::SurfaceReconstruction(
 
 					if (sdf <= truncationDistance / 2 && sdf >= -truncationDistance / 2) {
 
-						Vector4uc& voxel_color = volume.GetColorVal(location);
+						Vector4uc voxel_color = volume.GetColorVal(location);
 						const Vector4uc image_color = cur_Frame.getColorMap()[uv.x() + (uv.y() * width)];
 
 						voxel_color[0] = (old_weight * voxel_color[0] + new_weight * image_color[0]) /
