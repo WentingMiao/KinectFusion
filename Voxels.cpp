@@ -1,5 +1,7 @@
 #include "Voxels.h"
 
+VoxelInterface::~VoxelInterface() {}
+
 Vector4f VoxelInterface::World2Camera(const Vector4f& world_location)
 {
     return _Pose * world_location;

@@ -20,7 +20,7 @@ class VoxelInterface
 {
 public:
     VoxelInterface(float grid_len, Matrix4f Pose) : _grid_len{grid_len}, _Pose{Pose} {};
-    virtual ~VoxelInterface() = default;
+    virtual ~VoxelInterface() = 0;
     virtual void SetWeightVal(const Vector4f &location, float weight) = 0;
     virtual void SetSDFVal(const Vector4f &location, float sdf) = 0;
     virtual void SetColorVal(const Vector4f &location, Vector4uc color) = 0;
@@ -56,11 +56,14 @@ public:
     virtual void SetSDFVal(const Vector4f &location, float sdf) override;
     virtual void SetColorVal(const Vector4f &location, Vector4uc color) override;
 
-    /* getting value in voxel*/
+    /* getting value in voxel */
     virtual float GetWeightVal(const Vector4f &location) const override;
     virtual float GetSDFVal(const Vector4f &location) const override;
     virtual Vector4uc GetColorVal(const Vector4f &location) const override;
-    
+    /* getting meta data */
+    Vector3f GetOrigin() const { return _origin; }
+    auto GetSize() const { return _size; }
+
     /* location manipulation*/
     // world location to voxel index
     unsigned location2idx(const Vector4f &location) const; 

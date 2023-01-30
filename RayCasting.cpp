@@ -1,10 +1,11 @@
 #include "RayCasting.h"
-
+#include <iostream>
+#include <vector>
 std::tuple<std::unique_ptr<float>, std::unique_ptr<BYTE>> RayCasting::SurfacePrediction() {
     unsigned width = _width;
     unsigned height = _height;
     std::unique_ptr<float> depth{new float[width * height]};
-    std::unique_ptr<BYTE> rgba{new BYTE[width * height]};
+    std::unique_ptr<BYTE> rgba{new BYTE[width * height * 4]};
     for (unsigned row = 0; row < height; ++row)
         for (unsigned col = 0; col < width; ++col)
         {
@@ -13,15 +14,17 @@ std::tuple<std::unique_ptr<float>, std::unique_ptr<BYTE>> RayCasting::SurfacePre
             rgba.get()[4 * (width * row + col) + 1] = ret.color(1);
             rgba.get()[4 * (width * row + col) + 2] = ret.color(2);
             rgba.get()[4 * (width * row + col) + 3] = ret.color(3);
-            depth.get()[width * row + col] = ret.depth;
-            // if (ret.depth == MINF)
-            //     depth.data[width * row + col] = 0;
+            if (ret.depth == MINF) // remove MINF in depth image
+                depth.get()[width * row + col] = 0;
+            else
+                depth.get()[width * row + col] = ret.depth * 5000;
         }
     return std::make_tuple(std::move(depth), std::move(rgba));
 }
 
 Vertex RayCasting::CastPixel(const unsigned x, const unsigned y)
 {
+    std::cout << "start pixel casting at " << Vector2i{x,y}.transpose() << std::endl; 
     Ray r{tsdf.Camera2World(Vector4f{0, 0, 0, 0}), Pixel2World(x, y), tsdf.getGridlen() / 2, 0.0f};
     Vector4f lastLocation;
     Vector4f currLocation;

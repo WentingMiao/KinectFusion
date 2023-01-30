@@ -15,6 +15,7 @@
 
 /*
 Suggestions from Shuze
+0. 传参适当少来点 const T& (穿不了rvalue)
 1. 减少while循环里定义的类对象
     （比如frame中不会变的尺寸等参数传入构造函数；一个函数负责接收图片产生vertice pyramid）
     （比如无需保存变量的Fusion类可以变成Fusion namespace）
@@ -87,7 +88,7 @@ int execute(){
     // vector<Vertex> vertices = previousFrame.getVertices(USE_ICP);
     // Initialization completed (frame 0 finished)
     // frame 1 start
-    while(sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 2){
+    while(sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 1){
         Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
         Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics();
         Matrix4f trajectory = sensor.GetTrajectory();
@@ -128,18 +129,26 @@ int execute(){
                 it->position = pose.Vector3fToVector4f(pose.TransformToVertex(pose.Vector4fToVector3f(it->position),cur_pose));
 	    
 	    //surface reconstruction
-	    VoxelArray volume(std::array<unsigned, 3>{200, 200, 200}, 0.5, Vector3f{-3, -3, 0}, cur_pose);
+	    VoxelArray volume(std::array<unsigned, 3>{100, 100, 50}, 0.5, Vector3f{-3, -3, 0}, cur_pose);
 
-	    Fusion fusion;
         float truncationDistance = 2;
-	    fusion.SurfaceReconstruction(currentFrame, volume, cur_pose, truncationDistance);
+        clock_t begin = clock();
+	    Fusion::SurfaceReconstruction(currentFrame, volume, truncationDistance);
+        clock_t end = clock();
+        double duration = double(end - begin) / CLOCKS_PER_SEC;
+        std::cout << "SurfaceReconstruction finished in " << duration << " secs" << std::endl;
+
         
         // ray casting
         RayCasting cast{width, height, cur_pose, volume};
-        auto imgs = cast.SurfacePrediction();
+        begin = clock();
+        auto [depth, rgbd] = cast.SurfacePrediction();
+        end = clock();
+        duration = double(end - begin) / CLOCKS_PER_SEC;
+        std::cout << "ray casting finish in " << duration << " secs" << std::endl;
         // saved in a more global variable so that it can be transformed into pyramid in the next loop
-        auto depth = std::move(std::get<0>(imgs));
-        auto rgbd = std::move(std::get<1>(imgs));
+        // auto depth = std::move(std::get<0>(imgs));
+        // auto rgbd = std::move(std::get<1>(imgs));
 
         // testing only begin
         FreeImageB rgbdimg{width, height};

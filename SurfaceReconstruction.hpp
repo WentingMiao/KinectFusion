@@ -3,8 +3,8 @@
 #include <memory>
 #include "Voxels.h"
 
-class Fusion {
-public:
+
+namespace Fusion {
     /*
         * @description : Loop over every world point and calculate a truncated signed distance value (TSDF), along with a weight
         * @param cur_Frame: current frame
@@ -13,13 +13,7 @@ public:
         * @param truncationDistance:
         * 
     */
-	bool SurfaceReconstruction(Frame& cur_Frame, VoxelArray& volume, const Eigen::Matrix4f& _pose, float truncationDistance);
-
-    private:
-        Eigen::Vector3f grid2world(int& x, int& y, int& z, float voxelSize);
-        Eigen::Vector2i project2Camera(Eigen::Vector3f& cam_position, Eigen::Matrix3f& Intrinsics);
-        float cal_Lamda(Eigen::Vector2i& uv, Eigen::Matrix3f& Intrinsics);
-        float cal_SDF(const float&lambda, Eigen::Vector3f& camera_pos, float depth);
+	bool SurfaceReconstruction(Frame& cur_Frame, VoxelArray& volume, float truncationDistance);
 };
 
 
