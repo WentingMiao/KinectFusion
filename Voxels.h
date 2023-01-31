@@ -31,6 +31,8 @@ public:
     virtual bool isValidLocation(const Vector4f &world_location) const = 0;
     Vector4f World2Camera(const Vector4f &world_location);
     Vector4f Camera2World(const Vector4f &camera_location);
+    virtual void InitWeightVal(const Vector4f& location) = 0;
+    virtual void InitSDFVal(const Vector4f& location) = 0;
     float getGridlen() const;
 #ifndef DEBUG
 protected:
@@ -55,6 +57,8 @@ public:
     virtual void SetWeightVal(const Vector4f &location, float weight) override;
     virtual void SetSDFVal(const Vector4f &location, float sdf) override;
     virtual void SetColorVal(const Vector4f &location, Vector4uc color) override;
+    virtual void InitWeightVal(const Vector4f& location) override;
+    virtual void InitSDFVal(const Vector4f& location) override;
 
     /* getting value in voxel */
     virtual float GetWeightVal(const Vector4f &location) const override;
