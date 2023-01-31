@@ -7,7 +7,7 @@ TODO: world与camera坐标转换如果常用可以独立成camera类
 */
 struct VoxelElement
 {
-    float sdf = MINF;
+    float sdf;
     float weight = 0;
     Vector4uc color = Vector4uc(0, 0, 0, 0);
 };
