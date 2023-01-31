@@ -8,7 +8,7 @@
 #include "VirtualSensor.h"
 #include "Eigen.h"
 #include "Frame.h"
-#include "Voxels.h"s
+#include "Voxels.h"
 #include "SurfaceReconstruction.hpp"
 #include "vector"
 
