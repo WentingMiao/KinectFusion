@@ -70,6 +70,19 @@ std::array<unsigned, 3> VoxelArray::idx2xyz(const unsigned idx) const {
     return std::array<unsigned, 3>{x, y, z};
 }
 
+void VoxelArray::InitWeightVal(const Vector4f& location)
+{
+    unsigned idx = location2idx(location);
+    voxel[idx].weight = 0;
+}
+
+void VoxelArray::InitSDFVal(const Vector4f& location)
+{
+    unsigned idx = location2idx(location);
+    voxel[idx].sdf = 1;
+}
+
+
 void VoxelArray::SetWeightVal(const Vector4f& location, float weight)
 {
     unsigned idx = location2idx(location);
