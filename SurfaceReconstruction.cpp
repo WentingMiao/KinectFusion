@@ -49,7 +49,7 @@ namespace
 
     float cal_SDF(const float lambda, Eigen::Vector3f camera_pos, float depth)
     {
-        return (-1.f) * ((1.f / lambda) * camera_pos.norm() - depth);
+        return depth - ((1.f / lambda) * camera_pos.norm());
     }
 
     bool IfInit(const Vector3f initlocation, Vector3f origin)
@@ -82,27 +82,15 @@ bool Fusion::SurfaceReconstruction(
     float voxelScale = volume.getGridlen();
     auto volumeSize = volume.GetSize();
     auto origin = volume.GetOrigin();
+	
+    ofstream camout("cam.txt");
+    ofstream my2out("tsdfvalue.txt");
+    ofstream depthout("depth.txt");
+    ofstream locationout("location.txt");
+    ofstream sdfout("sdf.txt");
+    ofstream tsdfout("tsdf.txt");
 
-    // std::cout<<"origin(0)"<<origin(0)<<endl;
-    // std::cout<<"origin(1)"<<origin(1)<<endl;
-    // std::cout<<"origin(2)"<<origin(2)<<endl;
-    
-    float maxweight = 10;
 
-    ofstream myout("sdf.txt");
-    if (myout.is_open()) {
-        myout << "is opened,out from myout" << endl;
-	}
-
-    myout<<"origin(0)"<<origin(0)<<endl;
-    myout<<"origin(1)"<<origin(1)<<endl;
-    myout<<"origin(2)"<<origin(2)<<endl;
-
-    myout << "width" << width <<std::endl; 
-    myout << "height" << height <<std::endl; 
-    myout << "voxelScale" << voxelScale <<std::endl; 
-    myout << "volumeSize" << volumeSize[0] <<std::endl; 
-    myout << "origin" << origin <<std::endl; 
     int i=1;
 
     // step2: traversal all the voxel in the colume
@@ -114,9 +102,15 @@ bool Fusion::SurfaceReconstruction(
             {
                 // step2.1:voxel position in the world coordinates
                 Vector4f location = volume.xyz2location(x , y, z);
+		locationout << "idx" << volume.location2idx(location) << endl;
+                locationout << "location" << location << endl;
+
 
                 // step2.2:world coordinates -> camera coordinates
                 Vector4f cam_position = volume.World2Camera(location); // current camera position
+		camout << "idx" << volume.location2idx(location) << endl;
+                camout << "cam_position:" << cam_position << endl;
+
                 // Check1:if the camera could see
                 if (cam_position.z() <= 0)
                     continue;
@@ -124,51 +118,46 @@ bool Fusion::SurfaceReconstruction(
                 // step2.3: project to camera coordinates (2d) to get the corresponding pixel coordinate value (x, y)
                 Vector2i uv = project2Camera(cam_position.block<3, 1>(0, 0), Intrinsics);
 
-                myout << "x:" << x << " y:" << y << " z:" << z << endl;
-
-
-                //std::cout << "uv " << uv << std::endl; 
-                myout << "uv.x:" << uv.x() << " uv.y:" << uv.y() << endl; 
+		    
                 // Check2:if the projection point is correctly projected within the image extent
                 if (uv.x() < 0 || uv.x() >= width || uv.y() < 0 || uv.y() >= height)
                     continue;
 
                 // The depth value of the pixel corresponding to the current voxel
                 const float depth = cur_Frame.getDepthMap()[uv.x() + (uv.y() * width)];
-                //std::cout << "depth " << depth << std::endl; 
-                //std::cout << "1" << std::endl; 
+		depthout << "idx" << volume.location2idx(location) << endl;
+                depthout << "depth " << depth << endl; 
 
                 
                 // Check3: if depth <=0
                 if (depth <= 0)
                     continue;
-                myout << "if depth>0,depth:" << depth << endl; 
+		    
                 // step2.4:calculate TSDF
                 // tsfd = dx(depth) - dv(distance from current voxel to the camera)
                 // cout << "start writing at location: " << uv.transpose() << "with grid " << Vector3i{x, y, z}.transpose() << endl;
-               
-                //std::cout << "depth " << depth << std::endl; 
+
                 const float lambda = cal_Lamda(uv, Intrinsics);
-                const float sdf = cal_SDF(lambda, Vec4to3(cam_position), depth);
+                //const float sdf = cal_SDF(lambda, Vec4to3(cam_position), depth);
+		const float sdf = depth - cam_position.z() ;
+		sdfout << "idx" << volume.location2idx(location) << endl;
+                sdfout << "sdf " << sdf << endl; 
                 
 
-                //myout<<"locationX:"<<Vec4to3(location)(0)<<"locationY:"<<Vec4to3(location)(1)<<"locationZ:"<<Vec4to3(location)(2)<<endl;
-
-                if(i == 1){
-                   // myout<<"init"<<endl;
-                    //init tsdf&weight
-                    volume.InitWeightVal(location);
-                    volume.InitSDFVal(location);
-                    i++;
-                }
-                myout << "SDF:" << sdf << endl; 
                 // SDF Conversion to TSDF
                 if (sdf >= -truncationDistance)
                 {
+		
+		    if(i == 1){
+                        //init tsdf&weight
+                        volume.InitWeightVal(location);
+                        volume.InitSDFVal(location);
+                        i++;
+                    }
                     // get current TSDF
                     const float new_tsdf = fmin(1.f, sdf / truncationDistance);
-                    //const float new_weight = 1.0;
-                    //cout << "new_weight" << new_weight << endl;
+		    //const float new_tsdf2 = fmax(-1, fmin(1.f, sdf / truncationDistance));
+
 
                     // get TSDF and weight already stored in the current model
                     // size_t voxel_index = x + (y * volumeSize[0]) + (z * volumeSize[0] * volumeSize[1]);
@@ -187,16 +176,8 @@ bool Fusion::SurfaceReconstruction(
                     volume.SetWeightVal(location, updated_weight);
 
                     //test
-                    myout << "if sdf >= -truncationDistance" << endl;
-                    myout << "new_tsdf" << new_tsdf << endl;
-                    //myout << "old_tsdf" << old_tsdf << endl;
-                    myout << "old_weight" << old_weight << endl;
-                    myout << "new_weight" << new_weight << endl;
-                    //myout << updated_tsdf << endl;
-                    myout << "updated_weight:" << updated_weight << endl;
-
-                    //cout << "updated_tsdf:" << updated_tsdf << endl;
-                    //volume.showtsdf(location);
+                    tsdfout << "idx" << volume.location2idx(location) << endl;
+                    tsdfout << "updated_tsdf" << updated_tsdf << endl;
 
 
                     if (sdf <= truncationDistance / 2 && sdf >= -truncationDistance / 2)
@@ -215,13 +196,19 @@ bool Fusion::SurfaceReconstruction(
                                          (old_weight + new_weight);
                         volume.SetColorVal(location, voxel_color);
                     }
-
-                    myout<<endl;
                 }
+		my2out<<"idx"<<volume.xyz2idx(x, y, z)<<endl;
+                my2out<<"tsdf"<<volume.GetSDFVal(location)<<endl;
+
             }
         }
     }
     
-    myout.close();
+    //my3out.close();
+    depthout.close();
+    sdfout.close();
+    tsdfout.close();
+    locationout.close();
+    camout.close();
     return true;
 }
