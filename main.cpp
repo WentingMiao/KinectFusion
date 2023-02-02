@@ -129,9 +129,9 @@ int execute(){
                 it->position = pose.Vector3fToVector4f(pose.TransformToVertex(pose.Vector4fToVector3f(it->position),cur_pose));
 	    
 	    //surface reconstruction
-	    VoxelArray volume(std::array<unsigned, 3>{100, 100, 50}, 0.5, Vector3f{-3, -3, 0}, cur_pose);
+	    VoxelArray volume(std::array<unsigned, 3>{100, 100, 50}, 0.08, Vector3f{-3, -3, 0}, cur_pose);
 
-        float truncationDistance = 2;
+        float truncationDistance = 4;
         clock_t begin = clock();
 	    Fusion::SurfaceReconstruction(currentFrame, volume, truncationDistance);
         clock_t end = clock();
