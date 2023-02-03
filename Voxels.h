@@ -2,6 +2,7 @@
 #include "Frame.h"
 #include "Eigen.h"
 #include "vector"
+#include "util.h"
 /*
 TODO: world与camera坐标转换如果常用可以独立成camera类
 */
@@ -31,6 +32,7 @@ public:
     virtual bool isValidLocation(const Vector4f &world_location) const = 0;
     Vector4f World2Camera(const Vector4f &world_location);
     Vector4f Camera2World(const Vector4f &camera_location);
+    /*初始化不用这么麻烦。。。*/
     virtual void InitWeightVal(const Vector4f& location) = 0;
     virtual void InitSDFVal(const Vector4f& location) = 0;
     float getGridlen() const;
@@ -64,9 +66,13 @@ public:
     virtual float GetWeightVal(const Vector4f &location) const override;
     virtual float GetSDFVal(const Vector4f &location) const override;
     virtual Vector4uc GetColorVal(const Vector4f &location) const override;
-    /* getting meta data */
+    /* getting origin location data */
     Vector3f GetOrigin() const { return _origin; }
     auto GetSize() const { return _size; }
+
+    auto GetDimX() const { return _size[0]; }
+    auto GetDimY() const { return _size[1]; }
+    auto GetDimZ() const { return _size[2]; }
 
     /* location manipulation*/
     // world location to voxel index

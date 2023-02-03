@@ -26,11 +26,6 @@ Ray casting module:
     3. 重构代码？
 */
 
-// unsigned char manipulation functions
-Vector4uc uc_addition(const Vector4uc &a, const Vector4uc &b);
-Vector4uc uc_subtraction(const Vector4uc &a, const Vector4uc &b);
-Vector4uc uc_elementwise_mult(float a, const Vector4uc &b);
-
 class RayCasting
 {
 public:

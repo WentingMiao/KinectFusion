@@ -39,6 +39,9 @@ set(HEADERS
     Voxels.h
     RayCasting.h
     SurfaceReconstruction.hpp
+    MarchingCubes.h
+    MarchingCubes.h
+    SimpleMesh.h
 )
 
 set(SOURCES
@@ -54,7 +57,7 @@ set(SOURCES
 
 link_directories(${FreeImage_LIBRARY_DIR})
 link_directories(${OpenCV_INCLUDE_DIR})
-include_directories( ${OpenCV_INCLUDE_DIRS})
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 
 

@@ -1,7 +1,29 @@
 #include "RayCasting.h"
 #include <iostream>
 #include <vector>
-std::tuple<std::unique_ptr<float>, std::unique_ptr<BYTE>> RayCasting::SurfacePrediction() {
+namespace
+{
+    Vector4uc uc_subtraction(const Vector4uc &a, const Vector4uc &b)
+    {
+        Vector4uc tmp{a(0) - b(0), a(1) - b(1), a(2) - b(2), a(3) - b(3)};
+        return tmp;
+    }
+
+    Vector4uc uc_addition(const Vector4uc &a, const Vector4uc &b)
+    {
+        Vector4uc tmp{static_cast<u_char>(a(0) + b(0)), static_cast<u_char>(a(1) + b(1)), static_cast<u_char>(a(2) + b(2)), static_cast<u_char>(a(3) + b(3))};
+        return tmp;
+    }
+
+    Vector4uc uc_elementwise_mult(float a, const Vector4uc &b)
+    {
+        Vector4uc tmp{static_cast<u_char>(a * b(0)), static_cast<u_char>(a * b(1)), static_cast<u_char>(a * b(2)), static_cast<u_char>(a * b(3))};
+        return tmp;
+    }
+}
+
+std::tuple<std::unique_ptr<float>, std::unique_ptr<BYTE>> RayCasting::SurfacePrediction()
+{
     unsigned width = _width;
     unsigned height = _height;
     std::unique_ptr<float> depth{new float[width * height]};
@@ -24,15 +46,14 @@ std::tuple<std::unique_ptr<float>, std::unique_ptr<BYTE>> RayCasting::SurfacePre
 
 Vertex RayCasting::CastPixel(const unsigned x, const unsigned y)
 {
-    std::cout << "start pixel casting at " << Vector2i{x,y}.transpose() << std::endl; 
     Ray r{tsdf.Camera2World(Vector4f{0, 0, 0, 0}), Pixel2World(x, y), tsdf.getGridlen() / 2, 0.0f};
     Vector4f lastLocation;
     Vector4f currLocation;
-    while (tsdf.isValidLocation(r.getLocation())) 
+    while (tsdf.isValidLocation(r.getLocation()))
     {
         lastLocation = currLocation;
         currLocation = r.getLocation();
-        if (tsdf.GetSDFVal(lastLocation) * tsdf.GetSDFVal(currLocation) <= 0) // surface
+        if (tsdf.GetSDFVal(lastLocation) * tsdf.GetSDFVal(currLocation) < 0) // surface
             return interpolation(r, lastLocation, currLocation);
         else
             r.step();
@@ -40,7 +61,7 @@ Vertex RayCasting::CastPixel(const unsigned x, const unsigned y)
     return Vertex{};
 }
 
-Vertex RayCasting::interpolation(const Ray& r, const Vector4f &loc1, const Vector4f &loc2)
+Vertex RayCasting::interpolation(const Ray &r, const Vector4f &loc1, const Vector4f &loc2)
 {
     /*
     untested
@@ -51,7 +72,8 @@ Vertex RayCasting::interpolation(const Ray& r, const Vector4f &loc1, const Vecto
         factor := -f(x2) / f(x1) - f(x2)
         x* = x2 + factor * x2x1
     */
-
+    std::cout << "Interpolation between " << loc1.transpose() << " and " << loc2.transpose() << " with sdf " << tsdf.GetSDFVal(loc1) << " and " << tsdf.GetSDFVal(loc2)
+              << std::endl;
     float factor = (tsdf.GetSDFVal(loc2) / (tsdf.GetSDFVal(loc2) - tsdf.GetSDFVal(loc1)));
     float depth = r._distance - factor * r._step_size;
     Vector4f est_location = loc2 + factor * (loc1 - loc2);
@@ -74,28 +96,6 @@ Vector4f RayCasting::Pixel2World(unsigned int x, unsigned int y)
     float z = 1; // value of z doesn't matter
     return _Pose * Vector4f{z * (x - cX) / fX, z * (y - cY) / fY, z, 1.f};
 }
-
-
-
-Vector4uc uc_subtraction(const Vector4uc &a, const Vector4uc &b)
-{
-    Vector4uc tmp{a(0) - b(0), a(1) - b(1), a(2) - b(2), a(3) - b(3)};
-    return tmp;
-}
-
-Vector4uc uc_addition(const Vector4uc &a, const Vector4uc &b)
-{
-    Vector4uc tmp{static_cast<u_char>(a(0) + b(0)), static_cast<u_char>(a(1) + b(1)), static_cast<u_char>(a(2) + b(2)), static_cast<u_char>(a(3) + b(3))};
-    return tmp;
-}
-
-Vector4uc uc_elementwise_mult(float a, const Vector4uc &b)
-{
-    Vector4uc tmp{static_cast<u_char>(a * b(0)), static_cast<u_char>(a * b(1)), static_cast<u_char>(a * b(2)), static_cast<u_char>(a * b(3))};
-    return tmp;
-}
-
-
 
 Vector4f RayCasting::Ray::getLocation()
 {
