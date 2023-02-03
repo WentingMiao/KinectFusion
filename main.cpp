@@ -16,11 +16,10 @@
 
 /*
 Suggestions from Shuze
-0. 传参适当少来点 const T& (穿不了rvalue)
+0. 传参适当少来点 const T& (传不了rvalue)
 1. 减少while循环里定义的类对象
     （比如frame中不会变的尺寸等参数传入构造函数；一个函数负责接收图片产生vertice pyramid）
-    （比如无需保存变量的Fusion类可以变成Fusion namespace）
-2. 需要更多封装以令各模块简洁
+2. 需要更多封装以令各模块简洁 [no raw for loop](https://belaycpp.com/2021/06/22/dont-use-raw-loops/)
     理想：
     int main() {
         init();
@@ -32,13 +31,16 @@ Suggestions from Shuze
         }
         return 0;
     }
-3. 合并冗余函数
-    例如转换Camera与World coordinate的函数（可以独立成类专门保存内外参、负责转换）
+3. 合并冗余函数: util.h
+    例如转换Camera与World coordinate的函数
+    转换3与4vector的函数
 4. 避免局部变量保存配置参数
     (用宏#DEFINE 比局部变量更清晰、更易于更改)
 */
 
-void export_mesh(const VoxelArray &volume, std::string_view outpath)
+/* export volume using marching cubes*/
+void export_mesh(const VoxelArray &volume, const string& outpath)
+// todo: export colored mesh
 {
     SimpleMesh mesh;
     for (unsigned int x = 0; x < volume.GetDimX() - 1; x++)
@@ -49,8 +51,8 @@ void export_mesh(const VoxelArray &volume, std::string_view outpath)
                 MC::ProcessVolumeCell(volume, x, y, z, 0.0f, mesh);
     }
     // write mesh to file
-    if (!mesh.WriteMesh("../results/out_mesh.off"))
-        throw std::runtime_error("ERROR: unable to write output mesh file: " + std::string{outpath});
+    if (!mesh.WriteMesh(outpath))
+        throw std::runtime_error("ERROR: unable to write output mesh file: " + outpath);
 }
 
 int execute()
@@ -158,7 +160,7 @@ int execute()
         std::cout << "SurfaceReconstruction finished in " << duration << " secs" << std::endl;
 
         export_mesh(volume, "../result/out_mesh.off");
-        
+
         // // ray casting
         // RayCasting cast{width, height, cur_pose, volume};
         // begin = clock();
