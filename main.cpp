@@ -94,7 +94,7 @@ int execute()
     const float distance_threshold = 0.01f;
     const float angle_threshold = 20.0f;
     std::vector<int> num_iterations = std::vector<int>{10, 5, 4}; // from last to front
-    const int max_level = 3;
+    const int max_level = 2;
 
     Frame previousFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered, max_level);
 
@@ -108,7 +108,7 @@ int execute()
     // vector<Vertex> vertices = previousFrame.getVertices(USE_ICP);
     // Initialization completed (frame 0 finished)
     // frame 1 start
-    while (sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 1)
+    while (sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 2)
     {
         Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
         Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics();
@@ -150,7 +150,7 @@ int execute()
                 it->position = pose.Vector3fToVector4f(pose.TransformToVertex(pose.Vector4fToVector3f(it->position), cur_pose));
 
         // surface reconstruction
-        VoxelArray volume(std::array<unsigned, 3>{100, 100, 50}, 0.08, Vector3f{-3, -3, 0}, cur_pose);
+        VoxelArray volume(std::array<unsigned, 3>{200, 200, 50}, 0.08, Vector3f{-3, -3, 0}, cur_pose);
 
         float truncationDistance = 4;
         clock_t begin = clock();
@@ -159,7 +159,9 @@ int execute()
         double duration = double(end - begin) / CLOCKS_PER_SEC;
         std::cout << "SurfaceReconstruction finished in " << duration << " secs" << std::endl;
 
-        export_mesh(volume, "../result/out_mesh.off");
+        stringstream ss_recon;
+        ss_recon << filenameBaseOut << "recon_" << sensor.GetCurrentFrameCnt() << ".off";
+        export_mesh(volume, ss_recon.str());
 
         // // ray casting
         // RayCasting cast{width, height, cur_pose, volume};
