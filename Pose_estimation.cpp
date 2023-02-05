@@ -61,7 +61,7 @@ bool Pose::pose_estimation(const std::vector<vector<Vertex>>& frame_data,
             }
 
             // step 2.3: point to plane ICP
-            incremental_caculation(frame_data[level], model_data[level], selected_matches, it);
+            incremental_caculation(frame_data[level], model_data[level], selected_matches);
 
         } 
     }
