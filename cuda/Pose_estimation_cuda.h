@@ -14,11 +14,16 @@ namespace kinectfusion{
 
 
 void data_association_cuda(     const std::vector<Vertex>& frame_data,
-                                const Matrix3f &Intrinsics,
+                                const Matrix3f& Intrinsics,
                                 const unsigned int& width,
                                 const unsigned int& height,
                                 std::unordered_map<int, int>& matches,
                                 const Eigen::MatrixXf& previous_pose,
-                                const Eigen::MatrixXf& current_pose
+                                const Eigen::MatrixXf& current_pose,
+                                const std::vector<Vertex>& model_data,
+                                const float& distance_threshold,
+                                const float& angle_threshold,
+                                double& loss
                                 );
+
 }
