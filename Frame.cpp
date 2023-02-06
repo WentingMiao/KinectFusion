@@ -10,8 +10,8 @@ Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics,
     if(!filtered){
         /* depth map without bilateralFilter */ 
         for (unsigned int i = 0 ; i < _width * _height; i++){
-             _depthMap[i] = depthMap[i];
-             _colorMap[i] = Vector4uc(colorMap[4*i], colorMap[4*i+1], colorMap[4*i+2], colorMap[4*i+3]);
+            _depthMap[i] = depthMap[i];
+            _colorMap[i] = Vector4uc(colorMap[4*i], colorMap[4*i+1], colorMap[4*i+2], colorMap[4*i+3]);
         }
 
     }else{
@@ -411,6 +411,7 @@ std::vector<int> Frame::getLevelWidth(){
 std::vector<int> Frame::getLevelHeight(){
     return _pyramidHeight;
 }
+
 vector<vector<Vertex>>  Frame::getPyramidVertex(bool icp_state){
 
 
@@ -430,12 +431,13 @@ vector<vector<Vertex>>  Frame::getPyramidVertex(bool icp_state){
                 for (int col = 0; col < _pyramidWidth[level-1] - 1; col += 2) {
                     float centerPixel = _pyramidDepthMap[level-1][row * _pyramidWidth[level-1] + col];
                     Vector4uc centerColor = _pyramidColorMap[level-1][row * _pyramidWidth[level-1] + col];
-                    // previousDepthMap.get(row, col);= nextDepthMap.get(row / 2, col / 2);
-                    float newPixel; 
+                    
+                    Vector4i newColor_int  = Vector4i(0,0,0,0);
+                    float newPixel ; 
 
                     if (centerPixel == MINF) {
                         newPixel = MINF;
-                        continue;
+                        newColor_int = Vector4i(0,0,0,0);
                     }else{
                         int topNeighbourRow = row - 1;
                         int leftNeighbourCol = col - 1;
@@ -458,24 +460,44 @@ vector<vector<Vertex>>  Frame::getPyramidVertex(bool icp_state){
                         for (int neighbourRow = topNeighbourRow; neighbourRow <= row + 1; neighbourRow++) {
                             for (int neighbourCol = leftNeighbourCol; neighbourCol <= col + 1; neighbourCol++) {
                                 float neighbourValue =  _pyramidDepthMap[level-1][neighbourRow * _pyramidWidth[level-1] + neighbourCol];
+                                Vector4uc n_color_char = _pyramidColorMap[level-1][neighbourRow * _pyramidWidth[level-1] + neighbourCol];
+                                Vector4i n_color_int = Vector4i((unsigned int)n_color_char(0),
+                                                                (unsigned int)n_color_char(1),
+                                                                (unsigned int)n_color_char(2),
+                                                                (unsigned int)n_color_char(3));
+                                cout<<"calculating average pooling.."<<endl;
                                 if (std::abs(neighbourValue - centerPixel) > MAX_DISTANCE) {
                                     numberOfPixels--;
                                 } else {
+                                    
                                     newPixel += neighbourValue;
+                                    newColor_int += n_color_int;
+                                   
                                 }
                             }                 
                         }
                         newPixel /= numberOfPixels;
-
+                        newColor_int /=numberOfPixels;
+                        
                     }
 
                     
-                    tmpDepthMap.insert(tmpDepthMap.begin() + (row / 2) * levelWidth + col / 2, newPixel);
+                    // tmpDepthMap.insert(tmpDepthMap.begin() + (row / 2) * levelWidth + col / 2, newPixel);
+                
+                    tmpDepthMap[(row / 2) * levelWidth + col / 2] = newPixel;
+                    Vector4uc newColor_uc = Vector4uc((unsigned char)newColor_int(0),
+                                                        (unsigned char)newColor_int(1),
+                                                        (unsigned char)newColor_int(2),
+                                                        (unsigned char)newColor_int(3));
+                   // tmpColorMap.insert(tmpColorMap.begin() + (row / 2) * levelWidth + col / 2, newColor_uc)
+                   // with a super super slow speed to calculate
+                    tmpColorMap[(row / 2) * levelWidth + col / 2] = newColor_uc;
 
                 }
             }
 
             _pyramidDepthMap.push_back(tmpDepthMap);
+            _pyramidColorMap.push_back(tmpColorMap);
         }
        
 
@@ -492,7 +514,8 @@ vector<vector<Vertex>>  Frame::getPyramidVertex(bool icp_state){
                 int idx = row * levelWidth + col;
                 float z = _pyramidDepthMap[level][idx]; 
                 Vector4f point_c, point_w;
-                Vector4uc color = _colorMap[idx];
+                // Vector4uc color = _colorMap[idx];
+                Vector4uc color = _pyramidColorMap[level][idx];
 
                 if(z == MINF){
                     point_w = Vector4f(MINF, MINF, MINF, MINF);
