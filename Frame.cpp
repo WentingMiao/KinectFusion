@@ -51,6 +51,8 @@ Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics,
         
     }
 
+    //cout <<"here"<<endl;
+    //cout<< (int)_colorMap[0](0)<<endl;
    
 
 }
@@ -379,7 +381,6 @@ void Frame::buildDepthPyramid(vector<float>& originalMap, vector<vector<float>>&
               arr.insert(arr.end(), gpyramid[i].ptr<float>(i), gpyramid[i].ptr<float>(i) + gpyramid[i].cols*gpyramid[i].channels());
             }
         }
-
         vector<float> filteredArr = vector<float>(gpyramid[i].cols*gpyramid[i].rows);
         applyBilateralFilter(arr, filteredArr, gpyramid[i].cols, gpyramid[i].rows);
         outputMap.push_back(filteredArr);
@@ -420,49 +421,55 @@ vector<vector<Vertex>>  Frame::getPyramidVertex(bool icp_state){
         float MAX_DISTANCE = 0.033f * 3.0f;
         if(level == 0){
             _pyramidDepthMap.push_back(_depthMap);
+            _pyramidColorMap.push_back(_colorMap);
         }else{
             vector<float> tmpDepthMap = vector<float>(levelHeight * levelWidth);
+            vector<Vector4uc> tmpColorMap = vector<Vector4uc>(levelHeight * levelWidth);
 
             for (int row = 0; row < _pyramidHeight[level-1] - 1; row += 2) {
                 for (int col = 0; col < _pyramidWidth[level-1] - 1; col += 2) {
                     float centerPixel = _pyramidDepthMap[level-1][row * _pyramidWidth[level-1] + col];
+                    Vector4uc centerColor = _pyramidColorMap[level-1][row * _pyramidWidth[level-1] + col];
                     // previousDepthMap.get(row, col);= nextDepthMap.get(row / 2, col / 2);
                     float newPixel; 
 
                     if (centerPixel == MINF) {
                         newPixel = MINF;
                         continue;
+                    }else{
+                        int topNeighbourRow = row - 1;
+                        int leftNeighbourCol = col - 1;
+                        int numberOfPixels = 9;
+
+                        if (col == 0) {
+                            leftNeighbourCol = 0;
+                            numberOfPixels = 6;
+                        }
+                        if (row == 0){
+                            topNeighbourRow = 0;
+                            numberOfPixels = 6;
+                        }
+                        if (col == 0 && row == 0)
+                        {
+                            numberOfPixels = 4;
+                        }
+
+                        newPixel = 0;
+                        for (int neighbourRow = topNeighbourRow; neighbourRow <= row + 1; neighbourRow++) {
+                            for (int neighbourCol = leftNeighbourCol; neighbourCol <= col + 1; neighbourCol++) {
+                                float neighbourValue =  _pyramidDepthMap[level-1][neighbourRow * _pyramidWidth[level-1] + neighbourCol];
+                                if (std::abs(neighbourValue - centerPixel) > MAX_DISTANCE) {
+                                    numberOfPixels--;
+                                } else {
+                                    newPixel += neighbourValue;
+                                }
+                            }                 
+                        }
+                        newPixel /= numberOfPixels;
+
                     }
 
-                    int topNeighbourRow = row - 1;
-                    int leftNeighbourCol = col - 1;
-                    int numberOfPixels = 9;
-
-                    if (col == 0) {
-                        leftNeighbourCol = 0;
-                        numberOfPixels = 6;
-                    }
-                    if (row == 0){
-                        topNeighbourRow = 0;
-                        numberOfPixels = 6;
-                    }
-                    if (col == 0 && row == 0)
-                    {
-                        numberOfPixels = 4;
-                    }
-
-                    newPixel = 0;
-                    for (int neighbourRow = topNeighbourRow; neighbourRow <= row + 1; neighbourRow++) {
-                        for (int neighbourCol = leftNeighbourCol; neighbourCol <= col + 1; neighbourCol++) {
-                            float neighbourValue =  _pyramidDepthMap[level-1][neighbourRow * _pyramidWidth[level-1] + neighbourCol];
-                            if (std::abs(neighbourValue - centerPixel) > MAX_DISTANCE) {
-                                numberOfPixels--;
-                            } else {
-                                newPixel += neighbourValue;
-                            }
-                        }                 
-                    }
-                    newPixel /= numberOfPixels;
+                    
                     tmpDepthMap.insert(tmpDepthMap.begin() + (row / 2) * levelWidth + col / 2, newPixel);
 
                 }
