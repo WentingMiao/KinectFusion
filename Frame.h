@@ -67,7 +67,7 @@ class Frame{
         unsigned int _height;
         
         // bilateralFilter values
-        int _dValue= 5; //Diameter of each pixel neighborhood that is used during filtering. 
+        int _dValue= 9; //Diameter of each pixel neighborhood that is used during filtering. 
         
        // double _sigmaColor = 0.033f; //Filter sigma in the color space. 
         unsigned int _maxLevel;
@@ -89,6 +89,7 @@ class Frame{
 
         vector<vector<Vertex>> _pyramidVertex;
         vector<vector<float>> _pyramidDepthMap;
+        vector<vector<Vector4uc>> _pyramidColorMap;
 
         vector<Matrix3f> _allDepthIntrinsic;
         vector<Vertex> vertices;
