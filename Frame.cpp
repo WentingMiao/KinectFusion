@@ -465,7 +465,7 @@ vector<vector<Vertex>>  Frame::getPyramidVertex(bool icp_state){
                                                                 (unsigned int)n_color_char(1),
                                                                 (unsigned int)n_color_char(2),
                                                                 (unsigned int)n_color_char(3));
-                                cout<<"calculating average pooling.."<<endl;
+                                
                                 if (std::abs(neighbourValue - centerPixel) > MAX_DISTANCE) {
                                     numberOfPixels--;
                                 } else {
