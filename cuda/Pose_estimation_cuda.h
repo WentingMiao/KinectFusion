@@ -5,15 +5,15 @@
 #include <cuda_runtime.h>
 #include <iostream>
 
-struct Match {
-    int cur_idx;
-    int prv_idx;
-};
+    struct Match {
+        int cur_idx;
+        int prv_idx;
+    };
 
 namespace kinectfusion{
 
 
-void data_association_cuda(     const std::vector<Vertex>& frame_data,
+std::tuple<MatrixXf, VectorXf> data_association_cuda(     const std::vector<Vertex>& frame_data,
                                 const Matrix3f& Intrinsics,
                                 const unsigned int& width,
                                 const unsigned int& height,
@@ -25,5 +25,7 @@ void data_association_cuda(     const std::vector<Vertex>& frame_data,
                                 const float& angle_threshold,
                                 double& loss
                                 );
+
+
 
 }

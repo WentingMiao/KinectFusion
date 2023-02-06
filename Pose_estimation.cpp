@@ -16,7 +16,7 @@ bool Pose::pose_estimation(const std::vector<vector<Vertex>>& frame_data,
                      Eigen::Matrix4f& cur_pose
 )
 {
-
+    clock_t main_begin = clock();
     // step 1: Initialize pose 
     m_current_pose = cur_pose;
     m_previous_pose = m_current_pose;
@@ -41,13 +41,24 @@ bool Pose::pose_estimation(const std::vector<vector<Vertex>>& frame_data,
             std::unordered_map<int, int> selected_matches;
 
             // step 2.1: data association + back projection
-            // data_association(frame_data[level], intrinstics[level], width[level], height[level], matches);
-            
-            kinectfusion::data_association_cuda(frame_data[level], intrinstics[level], width[level], height[level], matches, m_previous_pose, m_current_pose,
-                                                model_data[level], distance_threshold, angle_threshold, error);
-
             // step 2.2: outlier check 
-            // outlier_check(frame_data[level], model_data[level], matches, selected_matches, distance_threshold, angle_threshold, error);
+            // step 2.3: build linear system
+            std::tuple<MatrixXf, VectorXf> lgs = kinectfusion::data_association_cuda(frame_data[level],
+                                                                                     intrinstics[level], 
+                                                                                     width[level], 
+                                                                                     height[level], 
+                                                                                     matches, 
+                                                                                     m_previous_pose, 
+                                                                                     m_current_pose,
+                                                                                     model_data[level], 
+                                                                                     distance_threshold, 
+                                                                                     angle_threshold, 
+                                                                                     error);
+
+            MatrixXf A = std::get<0>(lgs);
+            VectorXf b = std::get<1>(lgs);
+            // step 2.3: sovle linear system --> get pose
+            incremental_caculation(A, b);
 
             // for evaluation
 
@@ -56,25 +67,19 @@ bool Pose::pose_estimation(const std::vector<vector<Vertex>>& frame_data,
             if(DEBUG){ 
                 std::cout << endl << "level is: " << level << endl;
                 std::cout << "current iteration is: " << it << endl;
-                std::cout << "Data association completed in " << elapsedSecs << " seconds. " << std::endl;
+                std::cout << "this iteration completed in " << elapsedSecs << " seconds. " << std::endl;
                 std::cout << "find match pairs: " << matches.size() << std::endl;
-                std::cout << "avarage error is: " << error / matches.size() << std::endl;                
-                // std::cout << "find match pairs: " << matches.size() << ", after detection: " << selected_matches.size() << std::endl;
-                // std::cout << "avarage error is: " << error / selected_matches.size() << std::endl;
-                // if(!selected_matches.size()) throw std::out_of_range("No match pairs, some error exist!!");
-
+                std::cout << "avarage L1 loss is: " << error / matches.size() << std::endl;                
             }
-
-            // step 2.3: point to plane ICP
-            incremental_caculation(frame_data[level], model_data[level], matches);
 
         } 
     }
 
     if(DEBUG){
-        std::cout << "Optimization iteration done " << std::endl;
+        clock_t main_end = clock();
+        double elapsedSecs = double(main_end - main_begin) / CLOCKS_PER_SEC;
+        std::cout << "Optimization iteration for this frame done in " << elapsedSecs << " seconds. " << std::endl;
     }
-
 
     cur_pose = m_current_pose;    
     return true;
@@ -227,62 +232,9 @@ void Pose::outlier_check(const std::vector<Vertex>& frame_data,
     }    
 }
 
-void Pose::incremental_caculation   (const std::vector<Vertex>& frame_data,
-                                     const std::vector<Vertex>& model_data,
-                                     std::unordered_map<int, int>& selected_matches)
-{
-        //step 2.2 ICP
-
-        // if(DEBUG){
-        // cout << "initial pose is :" << endl << m_current_pose << endl;
-        // }        
-
-        // prepare data for ICP
-
-        // for parallel we consider caculate each point pair
-
-        Vector3f s; // sourcePoint
-        Vector3f d; // targetPoint
-        Vector3f n;// targetNormal
-        const size_t N = selected_matches.size();
-        MatrixXf A = MatrixXf::Zero(N, 6);
-        VectorXf b = VectorXf::Zero(N);
-        int i = 0;
-
-        // version 1: with parallel
-
-        std::for_each(std::execution::par_unseq, selected_matches.begin(), selected_matches.end(), [&](const auto& it){
-            auto source_idx = it.first;
-            auto target_idx = it.second;            
-            // Note that sourcePoint always in camera space
-            s  = TransformToVertex(Vector4fToVector3f(frame_data[source_idx].position),m_current_pose);
-            d  = TransformToVertex(Vector4fToVector3f(model_data[target_idx].position),m_previous_pose);
-            n  = TransformToNormal(model_data[target_idx].normal,m_previous_pose);
-            A.block<1, 3>(i, 0) = s.cross(n).transpose();
-            A.block<1, 3>(i, 3) = n.transpose();
-            // part of point2plane, copied from paper
-            b(i) = (d - s).dot(n);
-            ++i;
-            // ICP incremental caculate
-        });
-        // version 2: without parallel
-
-        // for(auto it = selected_matches.begin(); it != selected_matches.end(); ++it){
-        //     auto source_idx = it->first;
-        //     auto target_idx = it->second;            
-        //     // Note that sourcePoint always in camera space
-        //     s  = TransformToVertex(Vector4fToVector3f(frame_data[source_idx].position),m_current_pose);
-        //     d  = TransformToVertex(Vector4fToVector3f(model_data[target_idx].position),m_previous_pose);
-        //     n  = TransformToNormal(model_data[target_idx].normal,m_previous_pose);
-        //     A.block<1, 3>(i, 0) = s.cross(n).transpose();
-        //     A.block<1, 3>(i, 3) = n.transpose();
-        //     // part of point2plane, copied from paper
-        //     b(i) = (d - s).dot(n);
-        //     ++i;
-        //     // ICP incremental caculate
-        // }
-
-        
+void Pose::incremental_caculation   (MatrixXf& A,
+                                     VectorXf& b)
+{        
         MatrixXf ATA = A.transpose() * A;
         MatrixXf ATb = A.transpose() * b;
         VectorXf x(6);

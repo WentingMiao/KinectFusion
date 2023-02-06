@@ -14,7 +14,7 @@
 #include <cuda_runtime.h>
 #include <vector_types.h>
 #include "Pose_estimation_cuda.h"
-
+#include <tuple>
 constexpr bool DEBUG{true};
 
 // struct Match {
@@ -84,9 +84,8 @@ void outlier_check( const std::vector<Vertex>& frame_data,
  * @description: Point to Plane ICP step. we update member m_current_pose with incremental
  * @return {*}
  */
-void incremental_caculation(const std::vector<Vertex>& frame_data,
-                            const std::vector<Vertex>& model_data,
-                            std::unordered_map<int, int>& selected_matches);
+void incremental_caculation   ( MatrixXf& A,
+                                VectorXf& b);
 
 
 /**

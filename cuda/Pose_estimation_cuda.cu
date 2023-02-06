@@ -1,8 +1,18 @@
 #include "Pose_estimation_cuda.h"
 #define PI acos(-1)
 
+#define HANDLE_ERROR(err) (HandleError(err, __FILE__, __LINE__))
+
+static void HandleError(cudaError_t err, const char *file, int line) {
+	if (err != cudaSuccess) {
+		fprintf(stderr, "Error %d: \"%s\" in %s at line %d\n", int(err), cudaGetErrorString(err), file, line);
+		exit(int(err));
+	}
+}
+
+
 namespace kinectfusion{
-    
+
 __device__
 Vector3f Vector4fToVector3f(Vector4f vertex){
     Vector3f output;
@@ -43,8 +53,8 @@ void data_association_kernel(           const Vertex* frame_data,
                                         Match* matches,
                                         unsigned int* match_count,
                                         unsigned int frame_data_size,
-                                        const Matrix4f previous_pose,
                                         const Matrix4f current_pose,
+                                        const Matrix4f previous_pose,
                                         const Vertex* model_data,
                                         const float distance_threshold,
                                         const float angle_threshold,
@@ -118,8 +128,46 @@ void data_association_kernel(           const Vertex* frame_data,
         }                              
     }
 }
+
+
+__global__ 
+void incremental_caculation_kernel (    const Vertex* frame_data,
+                                        const Vertex* model_data,
+                                        Match* matches,
+                                        unsigned int* match_count,
+                                        const Matrix4f previous_pose,
+                                        const Matrix4f current_pose,                                        
+                                        Matrix<float, 1,6>* A,
+                                        float* b,
+                                        unsigned int* matrix_count
+                                )
+{
+    const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
     
-void data_association_cuda(     const std::vector<Vertex>& frame_data,
+    if (idx >= *match_count) {
+        return;
+    }
+    
+    auto source_idx = matches[idx].cur_idx;
+    auto target_idx = matches[idx].prv_idx;             
+    // printf("source_idx %d ,targtet_idx %d\n", source_idx,target_idx);                                
+    // Note that sourcePoint always in camera space
+    Vector3f s  = TransformToVertex(Vector4fToVector3f(frame_data[source_idx].position),current_pose);
+    Vector3f d  = TransformToVertex(Vector4fToVector3f(model_data[target_idx].position),previous_pose);
+    Vector3f n  = TransformToNormal(model_data[target_idx].normal,previous_pose);
+
+    Matrix<float, 1, 6> point2plane_A; 
+    point2plane_A << n(2)*s(1)-n(1)*s(2), n(0)*s(2)-n(2)*s(0), n(1)*s(0)-n(0)*s(1), n(0), n(1), n(2);
+    A[idx] = point2plane_A;
+    float point2plane_b = (n(0)*d(0) + n(1)*d(1) + n(2)*d(2) - n(0)*s(0) - n(1)*s(1) - n(2)*s(2));
+    b[idx] = point2plane_b;
+
+    atomicAdd(matrix_count, 1);
+
+}
+
+
+std::tuple<MatrixXf, VectorXf> data_association_cuda(     const std::vector<Vertex>& frame_data,
                                 const Matrix3f& Intrinsics,
                                 const unsigned int& width,
                                 const unsigned int& height,
@@ -142,8 +190,9 @@ void data_association_cuda(     const std::vector<Vertex>& frame_data,
     cudaMemcpy(d_Intrinsics, &Intrinsics, sizeof(Matrix3f), cudaMemcpyHostToDevice);
 
     Match* d_matches;
-    unsigned int* d_match_count;
     cudaMalloc(&d_matches, frame_data.size() * sizeof(Match));
+
+    unsigned int* d_match_count;
     cudaMalloc(&d_match_count, sizeof(unsigned int));
     int match_count = 0;
     cudaMemcpy(d_match_count, &match_count, sizeof(unsigned int), cudaMemcpyHostToDevice);    
@@ -168,22 +217,26 @@ void data_association_cuda(     const std::vector<Vertex>& frame_data,
     dim3 block(32,32);
     dim3 grid(  (width + block.x - 1) / block.x,
                 (height + block.y - 1) / block.y);    
-    data_association_kernel <<<grid, block>>> (d_frame_data, d_Intrinsics, width, height, d_matches, d_match_count, frame_data.size(), previous_pose, current_pose,
-                                               d_model_data, distance_threshold, angle_threshold, d_loss);
+    data_association_kernel <<<grid, block>>> ( d_frame_data, 
+                                                d_Intrinsics, 
+                                                width, 
+                                                height, 
+                                                d_matches, 
+                                                d_match_count, 
+                                                frame_data.size(), 
+                                                current_pose, 
+                                                previous_pose,
+                                                d_model_data, 
+                                                distance_threshold, 
+                                                angle_threshold, 
+                                                d_loss);
 
-    cudaError_t error = cudaGetLastError();
-    if(error != cudaSuccess)
-    {
-        // print the CUDA error message and exit
-        printf("CUDA error: %s\n", cudaGetErrorString(error));
-        exit(-1);
-    }
 
-    cudaDeviceSynchronize();
-    // Copy data from device to host
+    HANDLE_ERROR(cudaDeviceSynchronize());
 
     cudaMemcpy(&match_count, d_match_count, sizeof(int), cudaMemcpyDeviceToHost);
-    
+
+    // handle matches to test effect
     Match* temp_matches_gpu = new Match[match_count];
     cudaMemcpy(temp_matches_gpu, d_matches, match_count * sizeof(Match), cudaMemcpyDeviceToHost);
 
@@ -194,12 +247,51 @@ void data_association_cuda(     const std::vector<Vertex>& frame_data,
 
     cudaMemcpy(&loss, d_loss, sizeof(double), cudaMemcpyDeviceToHost);
 
-
-
     delete[] temp_matches_gpu;
 
-    // cout << "value of match_count " << match_count << endl;
+    
+    Matrix<float, 1, 6> *h_A = new Matrix<float, 1,6>[match_count];
+    float *h_b = new float[match_count];
 
+    Matrix<float, 1,6>* d_A;
+    cudaMalloc((void **)&d_A, sizeof(Matrix<float, 1, 6>) * match_count);
+    float* d_b;
+    cudaMalloc((void **)&d_b, sizeof(float) * match_count);   
+
+    unsigned int* d_matrix_count;
+    cudaMalloc(&d_matrix_count, sizeof(unsigned int));
+    int matrix_count = 0;
+    cudaMemcpy(d_matrix_count, &matrix_count, sizeof(unsigned int), cudaMemcpyHostToDevice);     
+    // incremental_caculation 
+    dim3 threads(256);
+    dim3 blocks((match_count + threads.x - 1) / threads.x);  
+    
+    incremental_caculation_kernel <<<blocks, threads>>> (   d_frame_data, 
+                                                            d_model_data, 
+                                                            d_matches,
+                                                            d_match_count, 
+                                                            previous_pose, 
+                                                            current_pose,
+                                                            d_A, 
+                                                            d_b, 
+                                                            d_matrix_count);
+
+    HANDLE_ERROR(cudaDeviceSynchronize());
+
+    cudaMemcpy(h_A, d_A, sizeof(Matrix<float, 1, 6>) * match_count, cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_b, d_b, sizeof(float) * match_count, cudaMemcpyDeviceToHost);   
+
+    MatrixXf A = MatrixXf::Zero(match_count, 6);
+    VectorXf b = VectorXf::Zero(match_count);
+    for(int i = 0; i < match_count; i++)
+        {
+            A.row(i) = h_A[i];
+            b(i) = h_b[i];
+        }
+
+
+
+    
     // Free the GPU memory
 
     cudaFree(d_frame_data);
@@ -208,6 +300,10 @@ void data_association_cuda(     const std::vector<Vertex>& frame_data,
     cudaFree(d_Intrinsics);
     cudaFree(d_model_data);
     cudaFree(d_loss);
+    cudaFree(d_A);
+    cudaFree(d_b);
+    cudaFree(d_matrix_count);
+    return std::tuple(A,b);
 }
 
 
