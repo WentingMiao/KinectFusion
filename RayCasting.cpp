@@ -22,27 +22,26 @@ namespace
     }
 }
 
-std::tuple<std::unique_ptr<float>, std::unique_ptr<BYTE>> RayCasting::SurfacePrediction()
+std::tuple<float*, BYTE*> RayCasting::SurfacePrediction()
 {
     unsigned width = _width;
     unsigned height = _height;
-    std::unique_ptr<float> depth{new float[width * height]};
-    std::unique_ptr<BYTE> rgba{new BYTE[width * height * 4]};
+    float* depth = new float[width * height];
+    BYTE* rgba = new BYTE[width * height * 4];
     for (unsigned row = 0; row < height; ++row)
         for (unsigned col = 0; col < width; ++col)
         {
             Vertex ret = CastPixel(col, row);
-            rgba.get()[4 * (width * row + col)] = ret.color(0);
-            rgba.get()[4 * (width * row + col) + 1] = ret.color(1);
-            rgba.get()[4 * (width * row + col) + 2] = ret.color(2);
-            rgba.get()[4 * (width * row + col) + 3] = ret.color(3);
+            rgba[4 * (width * row + col)] = ret.color(0);
+            rgba[4 * (width * row + col) + 1] = ret.color(1);
+            rgba[4 * (width * row + col) + 2] = ret.color(2);
+            rgba[4 * (width * row + col) + 3] = ret.color(3);
             if (ret.depth == MINF) // remove MINF in depth image
-                depth.get()[width * row + col] = 0;
+                depth[width * row + col] = 0;
             else
-                depth.get()[width * row + col] = ret.depth;
+                depth[width * row + col] = ret.depth;
         }
-
-    return std::make_tuple(std::move(depth), std::move(rgba));
+    return std::make_tuple(depth, rgba);
 }
 
 Vertex RayCasting::CastPixel(const unsigned x, const unsigned y)

@@ -28,17 +28,17 @@ public:
     ~VoxelArray() = default;
     bool isValidLocation(const Vector4f &location) const;
 
-    /* setting value in voxel */
+    /* set value in voxel */
     void SetWeight(const Vector4f &location, float weight);
     void SetSDF(const Vector4f &location, float sdf);
     void SetColor(const Vector4f &location, Vector4uc color);
 
-    /* getting value in voxel */
+    /* get value in voxel */
     float GetWeight(const Vector4f &location) const;
     float GetSDF(const Vector4f &location) const;
     Vector4uc GetColor(const Vector4f &location) const;
 
-    /* getting meta info */
+    /* get meta info */
     Vector3f GetOrigin() const { return _origin; }
     auto GetSize() const { return _size; }
     auto GetDimX() const { return _size[0]; }
