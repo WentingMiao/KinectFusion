@@ -3,14 +3,12 @@
 #include "Eigen.h"
 #include "vector"
 #include "util.h"
-/*
-TODO: world与camera坐标转换如果常用可以独立成camera类
-*/
+
 struct VoxelElement
 {
-    float sdf;
+    float sdf = 1; // 与截断距离相符
     float weight = 0;
-    Vector4uc color = Vector4uc(0, 0, 0, 0);
+    Vector4uc color = Vector4uc( 0, 0, 255, 1);
 };
 // consistent with "Frame.h",
 // invalid SDF value: MINF,
@@ -22,19 +20,19 @@ class VoxelInterface
 public:
     VoxelInterface(float grid_len, Matrix4f Pose) : _grid_len{grid_len}, _Pose{Pose} {};
     virtual ~VoxelInterface() = 0;
+    // set value
     virtual void SetWeightVal(const Vector4f &location, float weight) = 0;
     virtual void SetSDFVal(const Vector4f &location, float sdf) = 0;
     virtual void SetColorVal(const Vector4f &location, Vector4uc color) = 0;
-    // change voxel value / insert new voxel according to world location
+    // get value
     virtual float GetWeightVal(const Vector4f &location) const = 0;
     virtual float GetSDFVal(const Vector4f &location) const = 0;
     virtual Vector4uc GetColorVal(const Vector4f &location) const = 0;
+
+    // location manipulation
     virtual bool isValidLocation(const Vector4f &world_location) const = 0;
     Vector4f World2Camera(const Vector4f &world_location);
     Vector4f Camera2World(const Vector4f &camera_location);
-    /*初始化不用这么麻烦。。。*/
-    virtual void InitWeightVal(const Vector4f& location) = 0;
-    virtual void InitSDFVal(const Vector4f& location) = 0;
     float getGridlen() const;
 #ifndef DEBUG
 protected:
@@ -59,17 +57,15 @@ public:
     virtual void SetWeightVal(const Vector4f &location, float weight) override;
     virtual void SetSDFVal(const Vector4f &location, float sdf) override;
     virtual void SetColorVal(const Vector4f &location, Vector4uc color) override;
-    virtual void InitWeightVal(const Vector4f& location) override;
-    virtual void InitSDFVal(const Vector4f& location) override;
 
     /* getting value in voxel */
     virtual float GetWeightVal(const Vector4f &location) const override;
     virtual float GetSDFVal(const Vector4f &location) const override;
     virtual Vector4uc GetColorVal(const Vector4f &location) const override;
-    /* getting origin location data */
+
+    /* getting meta info */
     Vector3f GetOrigin() const { return _origin; }
     auto GetSize() const { return _size; }
-
     auto GetDimX() const { return _size[0]; }
     auto GetDimY() const { return _size[1]; }
     auto GetDimZ() const { return _size[2]; }

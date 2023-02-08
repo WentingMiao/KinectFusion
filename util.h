@@ -1,6 +1,8 @@
 #pragma once
 #include "Eigen.h"
-namespace util {
+
+namespace util
+{
     inline Vector3f Vec4to3(const Vector4f vec)
     {
         return Vector3f{vec(0) / vec(3), vec(1) / vec(3), vec(2) / vec(3)};
@@ -11,24 +13,30 @@ namespace util {
         return Vector4f{vec(0), vec(1), vec(2), 1.f};
     }
 
-    class Camera {
+
+    class Camera
+    {
     public:
         // Vector3i camera2pixel(const Vector4f location) const {
 
         // }
         // Vector3i pixel2camera(const Vector3i pixel) const {
-            
+
         // }
-        Vector4f world2camera(const Vector4f location) const {
-            return Extrinsics * location; 
+        Vector4f world2camera(const Vector4f location) const
+        {
+            return Extrinsics * location;
         }
-        Vector4f camera2world(const Vector4f location) const {
-            return InvExtrinsics * location; 
+        Vector4f camera2world(const Vector4f location) const
+        {
+            return InvExtrinsics * location;
         }
 
-        Matrix3f getIntrinsics() {
+        Matrix3f getIntrinsics()
+        {
             return Intrinsics;
         }
+
     private:
         Matrix3f Intrinsics;
         Matrix4f Extrinsics;
@@ -36,4 +44,3 @@ namespace util {
         Matrix4f InvExtrinsics;
     };
 }
-    

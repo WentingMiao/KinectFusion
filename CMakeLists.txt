@@ -42,6 +42,7 @@ set(HEADERS
     MarchingCubes.h
     MarchingCubes.h
     SimpleMesh.h
+    Mesh.h
 )
 
 set(SOURCES

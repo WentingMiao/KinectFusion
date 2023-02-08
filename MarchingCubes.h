@@ -28,7 +28,7 @@ namespace MC
 		Vector3d ev0[8];
 	};
 
-	int edgeTable[256] = {
+	const int edgeTable[256] = {
 		0x0, 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
 		0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
 		0x190, 0x99, 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c,
@@ -62,7 +62,7 @@ namespace MC
 		0xf00, 0xe09, 0xd03, 0xc0a, 0xb06, 0xa0f, 0x905, 0x80c,
 		0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0};
 
-	int triTable[256][16] = {
+	const int triTable[256][16] = {
 		{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 		{0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 		{0, 1, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
@@ -325,7 +325,7 @@ namespace MC
 	Linearly interpolate the position where an isosurface cuts
 	an edge between two vertices, each with their own scalar value
 	*/
-	Vector3d VertexInterp(double isolevel, const Vector3d &p1, const Vector3d &p2, double valp1, double valp2)
+	inline Vector3d VertexInterp(double isolevel, const Vector3d &p1, const Vector3d &p2, double valp1, double valp2)
 	{
 		double factor = (isolevel - valp1) / (valp2 - valp1);
 		Vector3d interpolated_p = (p2 - p1) * factor + p1;
@@ -340,7 +340,7 @@ namespace MC
 	0 will be returned if the grid cell is either totally above
 	or totally below the isolevel.
 	*/
-	int Polygonise(MC_Gridcell grid, double isolevel, MC_Triangle *triangles)
+	inline int Polygonise(MC_Gridcell grid, double isolevel, MC_Triangle *triangles)
 	{
 
 		int ntriang;
@@ -408,12 +408,9 @@ namespace MC
 		return ntriang;
 	}
 
-	bool ProcessVolumeCell(const VoxelArray &vol, int x, int y, int z, double iso, SimpleMesh &mesh)
+	inline bool ProcessVolumeCell(const VoxelArray &vol, int x, int y, int z, double iso, SimpleMesh &mesh)
 	{
 		MC_Gridcell cell;
-
-		Vector3d tmp;
-
 		// cell corners
 		cell.p[0] = util::Vec4to3(vol.xyz2location(x + 1, y, z)).cast<double>();
 		cell.p[1] = util::Vec4to3(vol.xyz2location(x, y, z)).cast<double>().cast<double>();

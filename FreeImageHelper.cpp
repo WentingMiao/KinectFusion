@@ -166,6 +166,31 @@ bool FreeImage::SaveImageToFile(const std::string& filename, bool flipY)
 	return r;
 }
 
+// bool FreeImage::SaveDepthToFile(const std::string& filename)
+// {
+// 	FREE_IMAGE_FORMAT fif = FIF_PNG;
+// 	FIBITMAP *dib = FreeImage_Allocate(w, h, 24);
+// 	RGBQUAD color;
+// 	for (unsigned int j = 0; j < h; j++) {
+// 		for (unsigned int i = 0; i < w; i++) {
+// 			unsigned char col[3] = { 0, 0, 0 };
+
+// 			for (unsigned int c = 0; c < nChannels && c < 3; ++c)
+// 			{
+// 				col[c] = std::min(std::max(0, (int)(255.0f*data[nChannels * (w*j + i) + c])), 255);
+// 			}
+
+// 			color.rgbRed = col[0];
+// 			color.rgbGreen = col[1];
+// 			color.rgbBlue = col[2];
+// 			FreeImage_SetPixelColor(dib, i, j, &color);
+// 		}
+// 	}
+// 	bool r = FreeImage_Save(fif, dib, filename.c_str(), 0) == 1;
+// 	FreeImage_Unload(dib);
+// 	return r;
+// }
+
 
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////

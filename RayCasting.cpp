@@ -5,7 +5,7 @@ namespace
 {
     Vector4uc uc_subtraction(const Vector4uc &a, const Vector4uc &b)
     {
-        Vector4uc tmp{a(0) - b(0), a(1) - b(1), a(2) - b(2), a(3) - b(3)};
+        Vector4uc tmp{static_cast<u_char>(a(0) - b(0)), static_cast<u_char>(a(1) - b(1)), static_cast<u_char>(a(2) - b(2)), static_cast<u_char>(a(3) - b(3))};
         return tmp;
     }
 
@@ -28,10 +28,16 @@ std::tuple<std::unique_ptr<float>, std::unique_ptr<BYTE>> RayCasting::SurfacePre
     unsigned height = _height;
     std::unique_ptr<float> depth{new float[width * height]};
     std::unique_ptr<BYTE> rgba{new BYTE[width * height * 4]};
+
+    SimpleMesh ray_mesh;
+    SimpleMesh pixel_mesh;
+    auto ori = util::Vec4to3(tsdf.Camera2World(Vector4f{0, 0, 0, 1}));
+    Mesh::add_point(ray_mesh, ori, Vector4uc{0, 255, 0, 255});
+
     for (unsigned row = 0; row < height; ++row)
         for (unsigned col = 0; col < width; ++col)
         {
-            Vertex ret = CastPixel(row, col);
+            Vertex ret = CastPixel(col, row);
             rgba.get()[4 * (width * row + col)] = ret.color(0);
             rgba.get()[4 * (width * row + col) + 1] = ret.color(1);
             rgba.get()[4 * (width * row + col) + 2] = ret.color(2);
@@ -40,7 +46,15 @@ std::tuple<std::unique_ptr<float>, std::unique_ptr<BYTE>> RayCasting::SurfacePre
                 depth.get()[width * row + col] = 0;
             else
                 depth.get()[width * row + col] = ret.depth * 5000;
+            Mesh::add_line(ray_mesh, ori, util::Vec4to3(ret.position));
+            if (ret.position.x() != MINF)
+                Mesh::add_point(pixel_mesh, util::Vec4to3(ret.position));
         }
+
+    if (!ray_mesh.WriteColoredMesh("../results/out_casting.off"))
+        throw std::runtime_error("ERROR: unable to write output mesh file: ../results/out_casting.off");
+    if (!pixel_mesh.WriteColoredMesh("../results/pixel_casting.off"))
+        throw std::runtime_error("ERROR: unable to write output mesh file: ../results/out_casting.off");
     return std::make_tuple(std::move(depth), std::move(rgba));
 }
 
@@ -53,7 +67,7 @@ Vertex RayCasting::CastPixel(const unsigned x, const unsigned y)
     {
         lastLocation = currLocation;
         currLocation = r.getLocation();
-        if (tsdf.GetSDFVal(lastLocation) * tsdf.GetSDFVal(currLocation) < 0) // surface
+        if (tsdf.GetSDFVal(lastLocation) * tsdf.GetSDFVal(currLocation) < 0)
             return interpolation(r, lastLocation, currLocation);
         else
             r.step();
@@ -72,8 +86,7 @@ Vertex RayCasting::interpolation(const Ray &r, const Vector4f &loc1, const Vecto
         factor := -f(x2) / f(x1) - f(x2)
         x* = x2 + factor * x2x1
     */
-    std::cout << "Interpolation between " << loc1.transpose() << " and " << loc2.transpose() << " with sdf " << tsdf.GetSDFVal(loc1) << " and " << tsdf.GetSDFVal(loc2)
-              << std::endl;
+    // std::cout << "Interpolation between " << loc1.transpose() << " and " << loc2.transpose() << " with sdf " << tsdf.GetSDFVal(loc1) << " and " << tsdf.GetSDFVal(loc2) << std::endl;
     float factor = (tsdf.GetSDFVal(loc2) / (tsdf.GetSDFVal(loc2) - tsdf.GetSDFVal(loc1)));
     float depth = r._distance - factor * r._step_size;
     Vector4f est_location = loc2 + factor * (loc1 - loc2);

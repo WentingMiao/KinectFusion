@@ -134,13 +134,6 @@ bool Fusion::SurfaceReconstruction(
                 if (sdf >= -truncationDistance)
                 {
 
-                    if (i == 1)
-                    {
-                        // init tsdf&weight
-                        volume.InitWeightVal(location);
-                        volume.InitSDFVal(location);
-                        i++;
-                    }
                     // get current TSDF
                     const float new_tsdf = fmin(1.f, sdf / truncationDistance);
 

@@ -20,6 +20,7 @@
 #define MINF -std::numeric_limits<float>::infinity()
 #endif
 
+
 struct FreeImage {
 
 	FreeImage();
@@ -38,6 +39,8 @@ struct FreeImage {
 	bool LoadImageFromFile(const std::string& filename, unsigned int width = 0, unsigned int height = 0);
 
 	bool SaveImageToFile(const std::string& filename, bool flipY = false);
+
+	// bool FreeImage::SaveDepthToFile(const std::string& filename);
 
 	unsigned int w;
 	unsigned int h;

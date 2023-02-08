@@ -77,7 +77,6 @@ vector<Eigen::Vector4f> Frame::getCameraPoints(){
                 
 				// point_c = Vector4f(x, y, z, 1.0);
                 points[idx] =  _trajectory.inverse() * _depthExtrinsics.inverse() * Vector4f(x, y, z, 1.0);
-                
             }
         }
     }

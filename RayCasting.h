@@ -3,9 +3,10 @@
 #include "FreeImageHelper.h"
 #include <array>
 #include <tuple>
-#include <memory>
-#include "Voxels.h"
+#include "Mesh.h"
+// #include "Voxels.h"
 /*
+
 Ray casting module:
     Given Camera Pose and TSDF, generate a vertices with color and depth
     Role:
@@ -18,12 +19,6 @@ Ray casting module:
     auto imgs = cast.SurfacePrediction();
 
     TODO: support search distance limit!!!
-
-    meeting
-    0. 代码在干嘛？
-    1. lambda在干嘛？
-    2. 如何可视化？
-    3. 重构代码？
 */
 
 class RayCasting

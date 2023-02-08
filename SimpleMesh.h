@@ -26,6 +26,7 @@ public:
 	void Clear()
 	{
 		m_vertices.clear();
+		m_vertices_color.clear();
 		m_triangles.clear();
 	}
 
@@ -61,6 +62,7 @@ public:
 		if (!outFile.is_open())
 			return false;
 		// write header
+
 		outFile << "OFF" << std::endl;
 		outFile << m_vertices.size() << " " << m_triangles.size() << " 0" << std::endl;
 
@@ -82,8 +84,47 @@ public:
 		return true;
 	}
 
+	unsigned int AddColor(Vector4uc color) {
+		unsigned int cId = (unsigned int)m_vertices_color.size();
+		m_vertices_color.push_back(color);
+		return cId;
+	}
+
+	bool WriteColoredMesh(const std::string &filename)
+	{
+		std::ofstream outFile(filename);
+		if (m_vertices.size() != m_vertices_color.size())
+			throw std::runtime_error("SimpleMesh: exporting colored mesh with colors not matched");
+		if (!outFile.is_open())
+			return false;
+		// write header
+
+		outFile << "COFF" << std::endl;
+		outFile << m_vertices.size() << " " << m_triangles.size() << " 0" << std::endl;
+
+		// save vertices
+		for (unsigned int i = 0; i < m_vertices.size(); i++)
+		{
+			outFile << m_vertices[i].x() << " " << m_vertices[i].y() << " " << m_vertices[i].z() << " "
+					<< static_cast<int>(m_vertices_color[i](0)) << " " << static_cast<int>(m_vertices_color[i](1)) << " "
+					<< static_cast<int>(m_vertices_color[i](2)) << " " << static_cast<int>(m_vertices_color[i](3)) << std::endl;
+		}
+
+		// save faces
+		for (unsigned int i = 0; i < m_triangles.size(); i++)
+		{
+			outFile << "3 " << m_triangles[i].idx0 << " " << m_triangles[i].idx1 << " " << m_triangles[i].idx2 << std::endl;
+		}
+
+		// close file
+		outFile.close();
+
+		return true;
+	}
+
 private:
 	std::vector<vertex> m_vertices;
+	std::vector<Vector4uc> m_vertices_color;
 	std::vector<Triangle> m_triangles;
 };
 
@@ -185,3 +226,4 @@ private:
 };
 
 #endif // SIMPLE_MESH_H
+
