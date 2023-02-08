@@ -10,7 +10,7 @@
 // invalid Color value: Vector4uc(0, 0, 0, 0)
 struct VoxelElement
 {
-    float sdf = 1; // 与截断距离相符
+    float sdf = 1; // agree with tuencate distance
     float weight = 0;
     Vector4uc color = Vector4uc(0, 0, 0, 0);
 };

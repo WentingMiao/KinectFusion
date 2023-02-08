@@ -65,7 +65,6 @@ Vertex RayCasting::CastPixel(const unsigned x, const unsigned y)
 Vertex RayCasting::interpolation(const Ray &r, const Vector4f &loc1, const Vector4f &loc2)
 {
     /*
-    untested
     loc1: last
     loc2: curr
     Linear interpolation to approximate surface location

@@ -206,7 +206,7 @@ void Pose::outlier_check(const std::vector<Vertex>& frame_data,
             //caculate norm
             const float distance = (previous_global_vertex - current_global_vertex).norm();
             
-            // std::cout << distance << std::endl;
+            std::cout << distance << " " << previous_global_vertex.transpose()  << ", " << current_global_vertex.transpose() << std::endl;
             if (distance <= distance_threshold){
 
                 auto normal_angle = acos(previous_global_normal.dot(current_global_normal) / 

@@ -108,22 +108,17 @@ int execute()
                              max_level,
                              cur_pose);
 
-        // get source vertex map (frame k)
-        vector<Vertex> vertices = currentFrame.getVertices(USE_ICP);
-
-        for (auto it = vertices.begin(); it != vertices.end(); ++it)
-            if (it->position.x() != MINF)
-                it->position = pose.Vector3fToVector4f(pose.TransformToVertex(pose.Vector4fToVector3f(it->position), cur_pose));
+        
 
         // surface reconstruction
 
         #define truncationDistance 1
         clock_t begin = clock();
+        volume.SetPose(cur_pose);
         Fusion::SurfaceReconstruction(currentFrame, volume, truncationDistance);
         clock_t end = clock();
         double duration = double(end - begin) / CLOCKS_PER_SEC;
         std::cout << "SurfaceReconstruction finished in " << duration << " secs" << std::endl;
-
 
         // ray casting
         RayCasting cast{width, height, cur_pose, volume};
@@ -146,16 +141,28 @@ int execute()
         rgbdimg.SaveImageToFile("../results/rgbd" + std::to_string(sensor.GetCurrentFrameCnt()) + ".png");
         FreeImage depthimg{width, height, 1};
         for (int i = 0; i < width * height; i++)
-            depthimg.data[i] = 5000 * depthMap[i];
+            depthimg.data[i] = depthMap[i];
         auto depth_intensity = depthimg.ConvertToIntensity();
         depth_intensity.SaveImageToFile("../results/depth" + std::to_string(sensor.GetCurrentFrameCnt()) + ".png");
         // testing end
 
-        // stringstream ss;
-        // ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
-        // cout << ss.str() << endl;
-        // if (!currentFrame.writeMesh(vertices, ss.str(), 0))
-        //     throw std::runtime_error("Failed to write mesh!\nCheck file path!");
+        // get source vertex map (frame k)
+        vector<Vertex> vertices = currentFrame.getVertices(USE_ICP);
+
+        for (auto it = vertices.begin(); it != vertices.end(); ++it)
+            if (it->position.x() != MINF)
+                it->position = pose.Vector3fToVector4f(pose.TransformToVertex(pose.Vector4fToVector3f(it->position), cur_pose));
+        stringstream ss;
+        ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
+        cout << ss.str() << endl;
+        if (!currentFrame.writeMesh(vertices, ss.str(), 0))
+            throw std::runtime_error("Failed to write mesh!\nCheck file path!");
+        ss.flush();
+        ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << "_last.off";
+        cout << ss.str() << endl;
+        vector<Vertex> prev_vertices = previousFrame.getVertices(USE_ICP);
+        if (!previousFrame.writeMesh(prev_vertices, ss.str(), 0))
+            throw std::runtime_error("Failed to write mesh!\nCheck file path!");
     }
     Mesh::export_mesh(volume, "../results/out_mesh.off", true);
     
