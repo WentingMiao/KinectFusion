@@ -63,18 +63,17 @@ int execute()
         configuration of pose estimation
     */
     Eigen::Matrix4f cur_pose = Matrix4f::Identity();
-    const float distance_threshold = 0.01f;
+    const float distance_threshold = 0.02f;
     const float angle_threshold = 20.0f;
     std::vector<int> num_iterations = std::vector<int>{10, 5, 4}; // from last to front
 
     /* init volume*/
-    VoxelArray volume(std::array<unsigned, 3>{200, 200, 50}, 0.05, Vector3f{-3, -3, 0}, cur_pose);
-    
+    VoxelArray volume(std::array<unsigned, 3>{100, 100, 120}, 0.04, Vector3f{-1, -0.5, -1}, cur_pose);
     while (sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() < 10)
     {
         Matrix4f trajectory = sensor.GetTrajectory(); // not used
         BYTE* colorMapNew = &sensor.GetColorRGBX()[0];
-        float* depthMapNew = &sensor.GetDepth()[0];        
+        float* depthMapNew = &sensor.GetDepth()[0];
         Frame currentFrame(depthMapNew, colorMapNew, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered, max_level);
 
         if (colorMap != nullptr && depthMap != nullptr)
@@ -97,12 +96,13 @@ int execute()
                                  level_height,
                                  max_level,
                                  cur_pose);
+            std::cout << "New pose:" << std::endl;
+            std::cout << cur_pose << std::endl;
         }
 
         // surface reconstruction
-
         std::cout << "Starts Surface Reconstruction" << std::endl;
-        float truncationDistance = 1;
+        float truncationDistance = 0.5;
         clock_t begin = clock();
         volume.SetPose(cur_pose);
         Fusion::SurfaceReconstruction(currentFrame, volume, truncationDistance);

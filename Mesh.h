@@ -16,7 +16,9 @@ namespace Mesh {
             mesh.AddColor(volume.GetColor(util::Vec3to4(vert[i])));
         }
     }
-
+    // SimpleMesh mesh;
+    // Mesh::add_point(mesh, pt)
+    // mesh.WriteColoredMesh();
     inline void add_point(SimpleMesh& mesh, SimpleMesh::vertex pt, Vector4uc color = Vector4uc{255, 0, 0, 255})
     {
         if (pt.x() != MINF)
