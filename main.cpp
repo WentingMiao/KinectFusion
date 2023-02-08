@@ -75,7 +75,7 @@ int execute()
     const float distance_threshold = 0.01f;
     const float angle_threshold = 20.0f;
     std::vector<int> num_iterations = std::vector<int>{10, 5, 4}; // from last to front
-    const int max_level = 3;
+    const int max_level = 2;
 
     Frame previousFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered, max_level);
 
@@ -89,7 +89,7 @@ int execute()
     // vector<Vertex> vertices = previousFrame.getVertices(USE_ICP);
     // Initialization completed (frame 0 finished)
     // frame 1 start
-    while (sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 1)
+    while (sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 2)
     {
         Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
         Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics();

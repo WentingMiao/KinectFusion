@@ -74,12 +74,12 @@ bool Fusion::SurfaceReconstruction(
     auto volumeSize = volume.GetSize();
     auto origin = volume.GetOrigin();
 
-    ofstream camout("cam.txt");
-    ofstream my2out("tsdfvalue.txt");
-    ofstream depthout("depth.txt");
-    ofstream locationout("location.txt");
-    ofstream sdfout("sdf.txt");
-    ofstream tsdfout("tsdf.txt");
+    // ofstream camout("cam.txt");
+    // ofstream my2out("tsdfvalue.txt");
+    // ofstream depthout("depth.txt");
+    // ofstream locationout("location.txt");
+    // ofstream sdfout("sdf.txt");
+    // ofstream tsdfout("tsdf.txt");
 
     int i = 1;
 
@@ -92,13 +92,13 @@ bool Fusion::SurfaceReconstruction(
             {
                 // step2.1:voxel position in the world coordinates
                 Vector4f location = volume.xyz2location(x, y, z);
-                locationout << "idx" << volume.location2idx(location) << endl;
-                locationout << "location" << location << endl;
+                // locationout << "idx" << volume.location2idx(location) << endl;
+                // locationout << "location" << location << endl;
 
                 // step2.2:world coordinates -> camera coordinates
                 Vector4f cam_position = volume.World2Camera(location); // current camera position
-                camout << "idx" << volume.location2idx(location) << endl;
-                camout << "cam_position:" << cam_position << endl;
+                // camout << "idx" << volume.location2idx(location) << endl;
+                // camout << "cam_position:" << cam_position << endl;
 
                 // Check1:if the camera could see
                 if (cam_position.z() <= 0)
@@ -113,8 +113,8 @@ bool Fusion::SurfaceReconstruction(
 
                 // The depth value of the pixel corresponding to the current voxel
                 const float depth = cur_Frame.getDepthMap()[uv.x() + (uv.y() * width)];
-                depthout << "idx" << volume.location2idx(location) << endl;
-                depthout << "depth " << depth << endl;
+                // depthout << "idx" << volume.location2idx(location) << endl;
+                // depthout << "depth " << depth << endl;
 
                 // Check3: if depth <=0
                 if (depth <= 0)
@@ -127,8 +127,8 @@ bool Fusion::SurfaceReconstruction(
                 const float lambda = cal_Lamda(uv, Intrinsics);
                 // const float sdf = cal_SDF(lambda, Vec4to3(cam_position), depth);
                 const float sdf = depth - cam_position.z();
-                sdfout << "idx" << volume.location2idx(location) << endl;
-                sdfout << "sdf " << sdf << endl;
+                // sdfout << "idx" << volume.location2idx(location) << endl;
+                // sdfout << "sdf " << sdf << endl;
 
                 // SDF Conversion to TSDF
                 if (sdf >= -truncationDistance)
@@ -152,8 +152,8 @@ bool Fusion::SurfaceReconstruction(
                     volume.SetWeightVal(location, updated_weight);
 
                     // test
-                    tsdfout << "idx" << volume.location2idx(location) << endl;
-                    tsdfout << "updated_tsdf" << updated_tsdf << endl;
+                    // tsdfout << "idx" << volume.location2idx(location) << endl;
+                    // tsdfout << "updated_tsdf" << updated_tsdf << endl;
 
                     if (sdf <= truncationDistance / 2 && sdf >= -truncationDistance / 2)
                     {
@@ -172,17 +172,17 @@ bool Fusion::SurfaceReconstruction(
                         volume.SetColorVal(location, voxel_color);
                     }
                 }
-                my2out << "idx" << volume.xyz2idx(x, y, z) << endl;
-                my2out << "tsdf" << volume.GetSDFVal(location) << endl;
+                // my2out << "idx" << volume.xyz2idx(x, y, z) << endl;
+                // my2out << "tsdf" << volume.GetSDFVal(location) << endl;
             }
         }
     }
 
     // my3out.close();
-    depthout.close();
-    sdfout.close();
-    tsdfout.close();
-    locationout.close();
-    camout.close();
+    // depthout.close();
+    // sdfout.close();
+    // tsdfout.close();
+    // locationout.close();
+    // camout.close();
     return true;
 }
