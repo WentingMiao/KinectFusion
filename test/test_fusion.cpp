@@ -90,8 +90,8 @@ int main() {
 	std::array<unsigned, 3> volumesize{ 500, 500, 500 };
 	float voxel_size = 0.006f;
 	Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
-	Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics(); //ÄÚ²Î
-	Matrix4f trajectory = sensor.GetTrajectory(); //Íâ²Î
+	Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics(); //ï¿½Ú²ï¿½
+	Matrix4f trajectory = sensor.GetTrajectory(); //ï¿½ï¿½ï¿½
 
 	BYTE* colorMap = &sensor.GetColorRGBX()[0];
 	float* depthMap = &sensor.GetDepth()[0];
@@ -115,13 +115,13 @@ int main() {
 	Fusion fusion;
 	fusion.SurfaceReconstruction(currentFrame, volume, cur_pose, truncationDistance);
 
-	//float voxel_TSDF = volume->GetSDFVal();
-	//float voxel_weight = volume->GetWeightVal();
+	//float voxel_TSDF = volume->GetSDF();
+	//float voxel_weight = volume->GetWeight();
 
 	//build ply file for visualizing
 	//SaveVoxelGrid2SurfacePointCloud("tsdf.ply", volumesize,
 	//	voxel_size, origin_x,origin_y, origin_z,
-	//	voxel_TSDF, voxel_weight, 0.25, 2.0f); // ºóÁ½³¬²Î£º µ½ÒþÊÆÃæµÄ¾àÀëãÐÖµ£¨-1,1), ¿´µ½voxelµÄ´ÎÊý; ¼´(-0.4,0.4),3´Î
+	//	voxel_TSDF, voxel_weight, 0.25, 2.0f); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î£ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¾ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½-1,1), ï¿½ï¿½ï¿½ï¿½voxelï¿½Ä´ï¿½ï¿½ï¿½; ï¿½ï¿½(-0.4,0.4),3ï¿½ï¿½
 
 	//res = execute();
 	//return res;

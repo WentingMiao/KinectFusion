@@ -3,8 +3,8 @@
 #include "FreeImageHelper.h"
 #include <array>
 #include <tuple>
-#include "Mesh.h"
-// #include "Voxels.h"
+#include "Voxels.h"
+#include "util.h"
 /*
 
 Ray casting module:
@@ -30,6 +30,7 @@ public:
 private:
     Vector4f Pixel2World(unsigned int x, unsigned int y);                           // transform pixel location to world location
     Vertex CastPixel(const unsigned x, const unsigned y);                           // obtain the vertex corresponding to pixel
+    float World2Depth(Vector4f location);                               // obtain depth info
     struct Ray
     {
         inline Ray(const Vector4f &origin, const Vector4f &direction, float step_size, float begin_distance = 0)

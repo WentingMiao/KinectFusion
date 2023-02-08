@@ -58,10 +58,10 @@ bool compare_float(float a, float b)
 //     {
 //         auto tmp_loc = Rand_valid_location(tsdf._valid_location_range);
 //         auto tmp_val = 100 * (tmp_loc(0) - tmp_loc(1));
-//         tsdf.SetWeightVal(tmp_loc, tmp_val);
-//         tsdf.SetSDFVal(tmp_loc, tmp_val);
-//         ASSERT_TRUE(compare_float(tsdf.GetWeightVal(tmp_loc), tmp_val));
-//         ASSERT_TRUE(compare_float(tsdf.GetSDFVal(tmp_loc), tmp_val));
+//         tsdf.SetWeight(tmp_loc, tmp_val);
+//         tsdf.SetSDF(tmp_loc, tmp_val);
+//         ASSERT_TRUE(compare_float(tsdf.GetWeight(tmp_loc), tmp_val));
+//         ASSERT_TRUE(compare_float(tsdf.GetSDF(tmp_loc), tmp_val));
 //     }
 // }
 

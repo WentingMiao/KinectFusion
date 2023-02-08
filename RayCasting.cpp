@@ -28,12 +28,6 @@ std::tuple<std::unique_ptr<float>, std::unique_ptr<BYTE>> RayCasting::SurfacePre
     unsigned height = _height;
     std::unique_ptr<float> depth{new float[width * height]};
     std::unique_ptr<BYTE> rgba{new BYTE[width * height * 4]};
-
-    SimpleMesh ray_mesh;
-    SimpleMesh pixel_mesh;
-    auto ori = util::Vec4to3(tsdf.Camera2World(Vector4f{0, 0, 0, 1}));
-    Mesh::add_point(ray_mesh, ori, Vector4uc{0, 255, 0, 255});
-
     for (unsigned row = 0; row < height; ++row)
         for (unsigned col = 0; col < width; ++col)
         {
@@ -45,16 +39,9 @@ std::tuple<std::unique_ptr<float>, std::unique_ptr<BYTE>> RayCasting::SurfacePre
             if (ret.depth == MINF) // remove MINF in depth image
                 depth.get()[width * row + col] = 0;
             else
-                depth.get()[width * row + col] = ret.depth * 5000;
-            Mesh::add_line(ray_mesh, ori, util::Vec4to3(ret.position));
-            if (ret.position.x() != MINF)
-                Mesh::add_point(pixel_mesh, util::Vec4to3(ret.position));
+                depth.get()[width * row + col] = ret.depth;
         }
 
-    if (!ray_mesh.WriteColoredMesh("../results/out_casting.off"))
-        throw std::runtime_error("ERROR: unable to write output mesh file: ../results/out_casting.off");
-    if (!pixel_mesh.WriteColoredMesh("../results/pixel_casting.off"))
-        throw std::runtime_error("ERROR: unable to write output mesh file: ../results/out_casting.off");
     return std::make_tuple(std::move(depth), std::move(rgba));
 }
 
@@ -67,7 +54,7 @@ Vertex RayCasting::CastPixel(const unsigned x, const unsigned y)
     {
         lastLocation = currLocation;
         currLocation = r.getLocation();
-        if (tsdf.GetSDFVal(lastLocation) * tsdf.GetSDFVal(currLocation) < 0)
+        if (tsdf.GetSDF(lastLocation) * tsdf.GetSDF(currLocation) < 0)
             return interpolation(r, lastLocation, currLocation);
         else
             r.step();
@@ -86,18 +73,17 @@ Vertex RayCasting::interpolation(const Ray &r, const Vector4f &loc1, const Vecto
         factor := -f(x2) / f(x1) - f(x2)
         x* = x2 + factor * x2x1
     */
-    // std::cout << "Interpolation between " << loc1.transpose() << " and " << loc2.transpose() << " with sdf " << tsdf.GetSDFVal(loc1) << " and " << tsdf.GetSDFVal(loc2) << std::endl;
-    float factor = (tsdf.GetSDFVal(loc2) / (tsdf.GetSDFVal(loc2) - tsdf.GetSDFVal(loc1)));
-    float depth = r._distance - factor * r._step_size;
+    float factor = (tsdf.GetSDF(loc2) / (tsdf.GetSDF(loc2) - tsdf.GetSDF(loc1)));
+    // float depth = r._distance - factor * r._step_size;
     Vector4f est_location = loc2 + factor * (loc1 - loc2);
     Vector4uc color = uc_addition(
-        tsdf.GetColorVal(loc2),
+        tsdf.GetColor(loc2),
         uc_elementwise_mult(
             factor,
             uc_subtraction(
-                tsdf.GetColorVal(loc1),
-                tsdf.GetColorVal(loc2))));
-    return Vertex{est_location, color, depth};
+                tsdf.GetColor(loc1),
+                tsdf.GetColor(loc2))));
+    return Vertex{est_location, color, World2Depth(est_location)};
 }
 
 Vector4f RayCasting::Pixel2World(unsigned int x, unsigned int y)
@@ -109,6 +95,14 @@ Vector4f RayCasting::Pixel2World(unsigned int x, unsigned int y)
     float z = 1; // value of z doesn't matter
     return _Pose * Vector4f{z * (x - cX) / fX, z * (y - cY) / fY, z, 1.f};
 }
+
+float RayCasting::World2Depth(Vector4f location)
+{
+    location = tsdf.World2Camera(location); // back to camera
+    location /= location(3); // homogeneous back to heterogeneous
+    return location(2);
+}
+
 
 Vector4f RayCasting::Ray::getLocation()
 {

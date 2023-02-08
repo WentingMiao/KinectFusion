@@ -44,12 +44,7 @@ Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics,
 
         _pyramidHeight.push_back(height);
         _pyramidWidth.push_back(width);
-
-        
     }
-
-   
-
 }
 
 

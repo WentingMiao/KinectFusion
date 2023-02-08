@@ -9,7 +9,7 @@
 #include "Pose_estimation.h"
 #include "SurfaceReconstruction.hpp"
 #include "RayCasting.h"
-// #include "Mesh.h"
+#include "Mesh.h"
 
 #define USE_ICP 1
 // 1 if use icp to optimize pose
@@ -59,14 +59,13 @@ int execute()
     Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics();
     Matrix4f trajectory = sensor.GetTrajectory();
 
-    BYTE *colorMap = &sensor.GetColorRGBX()[0];
-    float *depthMap = &sensor.GetDepth()[0];
+    BYTE* colorMap = &sensor.GetColorRGBX()[0];
+    float* depthMap = &sensor.GetDepth()[0];
 
     unsigned int width = sensor.GetDepthImageWidth();
     unsigned int height = sensor.GetDepthImageHeight();
     float edgeThreshold = 10;
     bool filtered = true;
-
     /*
         configuration of pose estimation
     */
@@ -77,33 +76,19 @@ int execute()
     std::vector<int> num_iterations = std::vector<int>{10, 5, 4}; // from last to front
     const int max_level = 2;
 
-    Frame previousFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered, max_level);
-
-    vector<float> depthVectorMap = previousFrame.getDepthMap();
-
-    vector<vector<float>> depthPyramid;
-    // level 0 is large
-
-    previousFrame.buildDepthPyramid(depthVectorMap, depthPyramid, max_level);
-
-    // vector<Vertex> vertices = previousFrame.getVertices(USE_ICP);
-    // Initialization completed (frame 0 finished)
-    // frame 1 start
-    while (sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 2)
+    VoxelArray volume(std::array<unsigned, 3>{200, 200, 80}, 0.04, Vector3f{-3, -3, 0}, cur_pose);
+    
+    while (sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 10)
     {
-        Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
-        Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics();
-        Matrix4f trajectory = sensor.GetTrajectory();
+        Frame previousFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered, max_level);
+        vector<float> depthVectorMap = previousFrame.getDepthMap();
+        // vector<vector<float>> depthPyramid;
+        // previousFrame.buildDepthPyramid(depthVectorMap, depthPyramid, max_level);
 
-        BYTE *colorMap = &sensor.GetColorRGBX()[0];
-        float *depthMap = &sensor.GetDepth()[0];
-
-        unsigned int width = sensor.GetDepthImageWidth();
-        unsigned int height = sensor.GetDepthImageHeight();
-        Frame currentFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered, max_level);
-
-        // currentFrame.buildDepthPyramid(depthVectorMap, depthPyramid, pyramid_level);
-
+        BYTE* colorMapNew = &sensor.GetColorRGBX()[0];
+        float* depthMapNew = &sensor.GetDepth()[0];        
+        Frame currentFrame(depthMapNew, colorMapNew, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered, max_level);
+        
         Pose pose;
         auto level_intrinsics = currentFrame.getLevelCameraIntrinstics();
         auto level_current_vertices = currentFrame.getPyramidVertex(USE_ICP);
@@ -131,7 +116,6 @@ int execute()
                 it->position = pose.Vector3fToVector4f(pose.TransformToVertex(pose.Vector4fToVector3f(it->position), cur_pose));
 
         // surface reconstruction
-        VoxelArray volume(std::array<unsigned, 3>{100, 100, 50}, 0.04, Vector3f{-3, -3, 0}, cur_pose);
 
         #define truncationDistance 1
         clock_t begin = clock();
@@ -140,34 +124,41 @@ int execute()
         double duration = double(end - begin) / CLOCKS_PER_SEC;
         std::cout << "SurfaceReconstruction finished in " << duration << " secs" << std::endl;
 
-        Mesh::export_mesh(volume, "../results/out_mesh.off", true);
 
         // ray casting
         RayCasting cast{width, height, cur_pose, volume};
         begin = clock();
-        auto [depth, rgbd] = cast.SurfacePrediction();
+        auto [depth, rgba] = cast.SurfacePrediction();
+        if (sensor.GetCurrentFrameCnt() >= 2) {
+            delete[] depthMap;
+            delete[] colorMap;
+        }
+        depthMap = std::move(depth).get();
+        colorMap = std::move(rgba).get();
         end = clock();
         duration = double(end - begin) / CLOCKS_PER_SEC;
         std::cout << "ray casting finish in " << duration << " secs" << std::endl;
-        
-        // saved in a more global variable so that it can be transformed into pyramid in the next loop
 
         // testing begin
         FreeImageB rgbdimg{width, height};
-        rgbdimg.data = std::move(rgbd).get();
+        for (int i = 0; i < width * height * 4; i++)
+            rgbdimg.data[i] = colorMap[i];
         rgbdimg.SaveImageToFile("../results/rgbd" + std::to_string(sensor.GetCurrentFrameCnt()) + ".png");
         FreeImage depthimg{width, height, 1};
-        depthimg.data = std::move(depth).get();
-        depthimg.SaveImageToFile("../results/depth" + std::to_string(sensor.GetCurrentFrameCnt()) + ".png");
+        for (int i = 0; i < width * height; i++)
+            depthimg.data[i] = 5000 * depthMap[i];
+        auto depth_intensity = depthimg.ConvertToIntensity();
+        depth_intensity.SaveImageToFile("../results/depth" + std::to_string(sensor.GetCurrentFrameCnt()) + ".png");
         // testing end
 
-        /*write to the mesh*/
         // stringstream ss;
         // ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
         // cout << ss.str() << endl;
         // if (!currentFrame.writeMesh(vertices, ss.str(), 0))
         //     throw std::runtime_error("Failed to write mesh!\nCheck file path!");
     }
+    Mesh::export_mesh(volume, "../results/out_mesh.off", true);
+    
     return 0;
 }
 

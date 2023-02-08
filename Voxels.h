@@ -4,64 +4,39 @@
 #include "vector"
 #include "util.h"
 
+// consistent with "Frame.h",icp_state
+// invalid SDF value: MINF,
+// invalid weight value: 0,
+// invalid Color value: Vector4uc(0, 0, 0, 0)
 struct VoxelElement
 {
     float sdf = 1; // 与截断距离相符
     float weight = 0;
-    Vector4uc color = Vector4uc( 0, 0, 255, 1);
-};
-// consistent with "Frame.h",
-// invalid SDF value: MINF,
-// invalid weight value: 0,
-// invalid Color value: Vector4uc(0, 0, 0, 0)
-
-class VoxelInterface
-{
-public:
-    VoxelInterface(float grid_len, Matrix4f Pose) : _grid_len{grid_len}, _Pose{Pose} {};
-    virtual ~VoxelInterface() = 0;
-    // set value
-    virtual void SetWeightVal(const Vector4f &location, float weight) = 0;
-    virtual void SetSDFVal(const Vector4f &location, float sdf) = 0;
-    virtual void SetColorVal(const Vector4f &location, Vector4uc color) = 0;
-    // get value
-    virtual float GetWeightVal(const Vector4f &location) const = 0;
-    virtual float GetSDFVal(const Vector4f &location) const = 0;
-    virtual Vector4uc GetColorVal(const Vector4f &location) const = 0;
-
-    // location manipulation
-    virtual bool isValidLocation(const Vector4f &world_location) const = 0;
-    Vector4f World2Camera(const Vector4f &world_location);
-    Vector4f Camera2World(const Vector4f &camera_location);
-    float getGridlen() const;
-#ifndef DEBUG
-protected:
-#endif
-    const float _grid_len;
-    Matrix4f _Pose; // camera pose
+    Vector4uc color = Vector4uc(0, 0, 0, 0);
 };
 
-class VoxelArray : public VoxelInterface
+class VoxelArray
 {
 public:
     VoxelArray() = delete;
-    VoxelArray(std::array<unsigned, 3> size, float grid_len, Vector3f origin, Matrix4f Pose) : 
-        VoxelInterface{grid_len, Pose}, _origin{origin}, _size{size}, voxel{size[0] * size[1] * size[2]},
-            _valid_location_range{{_origin(0), _origin(0) + _grid_len * size[0]},
-            {_origin(1), _origin(1) + _grid_len * size[1]},
-            {_origin(2), _origin(2) + _grid_len * size[2]}} {};
-    virtual ~VoxelArray() = default;
-    virtual bool isValidLocation(const Vector4f &location) const override;
+    VoxelArray(std::array<unsigned, 3> size, float grid_len, Vector3f origin, Matrix4f Pose) : _grid_len{grid_len}, _Pose{Pose}, _origin{origin}, _size{size}, voxel{size[0] * size[1] * size[2]}
+    {
+        _valid_location_range = Matrix<float, 3, 2>{{_origin(0), _origin(0) + _grid_len * size[0]},
+                                                    {_origin(1), _origin(1) + _grid_len * size[1]},
+                                                    {_origin(2), _origin(2) + _grid_len * size[2]}};
+    };
+    ~VoxelArray() = default;
+    bool isValidLocation(const Vector4f &location) const;
 
     /* setting value in voxel */
-    virtual void SetWeightVal(const Vector4f &location, float weight) override;
-    virtual void SetSDFVal(const Vector4f &location, float sdf) override;
-    virtual void SetColorVal(const Vector4f &location, Vector4uc color) override;
+    void SetWeight(const Vector4f &location, float weight);
+    void SetSDF(const Vector4f &location, float sdf);
+    void SetColor(const Vector4f &location, Vector4uc color);
 
     /* getting value in voxel */
-    virtual float GetWeightVal(const Vector4f &location) const override;
-    virtual float GetSDFVal(const Vector4f &location) const override;
-    virtual Vector4uc GetColorVal(const Vector4f &location) const override;
+    float GetWeight(const Vector4f &location) const;
+    float GetSDF(const Vector4f &location) const;
+    Vector4uc GetColor(const Vector4f &location) const;
 
     /* getting meta info */
     Vector3f GetOrigin() const { return _origin; }
@@ -70,9 +45,15 @@ public:
     auto GetDimY() const { return _size[1]; }
     auto GetDimZ() const { return _size[2]; }
 
+    /* camera transformation */
+    Vector4f World2Camera(const Vector4f &world_location);
+    Vector4f Camera2World(const Vector4f &camera_location);
+    void SetPose(const Matrix4f pose) { _Pose = pose; }
+
     /* location manipulation*/
+    float getGridlen() const;
     // world location to voxel index
-    unsigned location2idx(const Vector4f &location) const; 
+    unsigned location2idx(const Vector4f &location) const;
     // voxel index to world location
     Vector4f idx2location(const unsigned idx) const;
     // xyz to world location
@@ -81,9 +62,12 @@ public:
     unsigned xyz2idx(const unsigned x, const unsigned y, const unsigned z) const;
     // index to xyz
     std::array<unsigned, 3> idx2xyz(const unsigned idx) const;
+
 private:
-    Vector3f _origin;                                      // corner of grid , {-3, -3, 0} may be appropriate
-    std::array<unsigned, 3> _size;                         // number of voxel on xyz dimension
-    Matrix<float, 3, 2> _valid_location_range;             // valid range of world location
+    Vector3f _origin;                          // corner of grid , {-3, -3, 0} may be appropriate
+    std::array<unsigned, 3> _size;             // number of voxel on xyz dimension
     std::vector<VoxelElement> voxel;
+    const float _grid_len;
+    Matrix<float, 3, 2> _valid_location_range; // valid range of world location
+    Matrix4f _Pose;
 };

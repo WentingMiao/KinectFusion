@@ -13,7 +13,7 @@ namespace Mesh {
         auto &vert = mesh.GetVertices();
         for (unsigned i = 0; i < vert.size(); i++)
         {
-            mesh.AddColor(volume.GetColorVal(util::Vec3to4(vert[i])));
+            mesh.AddColor(volume.GetColor(util::Vec3to4(vert[i])));
         }
     }
 

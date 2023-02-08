@@ -421,14 +421,14 @@ namespace MC
 		cell.p[6] = util::Vec4to3(vol.xyz2location(x, y + 1, z + 1)).cast<double>();
 		cell.p[7] = util::Vec4to3(vol.xyz2location(x + 1, y + 1, z + 1)).cast<double>();
 		// cell corner values
-		cell.val[0] = vol.GetSDFVal(vol.xyz2location(x + 1, y, z));
-		cell.val[1] = vol.GetSDFVal(vol.xyz2location(x, y, z));
-		cell.val[2] = vol.GetSDFVal(vol.xyz2location(x, y + 1, z));
-		cell.val[3] = vol.GetSDFVal(vol.xyz2location(x + 1, y + 1, z));
-		cell.val[4] = vol.GetSDFVal(vol.xyz2location(x + 1, y, z + 1));
-		cell.val[5] = vol.GetSDFVal(vol.xyz2location(x, y, z + 1));
-		cell.val[6] = vol.GetSDFVal(vol.xyz2location(x, y + 1, z + 1));
-		cell.val[7] = vol.GetSDFVal(vol.xyz2location(x + 1, y + 1, z + 1));
+		cell.val[0] = vol.GetSDF(vol.xyz2location(x + 1, y, z));
+		cell.val[1] = vol.GetSDF(vol.xyz2location(x, y, z));
+		cell.val[2] = vol.GetSDF(vol.xyz2location(x, y + 1, z));
+		cell.val[3] = vol.GetSDF(vol.xyz2location(x + 1, y + 1, z));
+		cell.val[4] = vol.GetSDF(vol.xyz2location(x + 1, y, z + 1));
+		cell.val[5] = vol.GetSDF(vol.xyz2location(x, y, z + 1));
+		cell.val[6] = vol.GetSDF(vol.xyz2location(x, y + 1, z + 1));
+		cell.val[7] = vol.GetSDF(vol.xyz2location(x + 1, y + 1, z + 1));
 
 		MC_Triangle tris[6];
 		int numTris = Polygonise(cell, iso, tris);

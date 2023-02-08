@@ -75,7 +75,7 @@ bool Fusion::SurfaceReconstruction(
     auto origin = volume.GetOrigin();
 
     // ofstream camout("cam.txt");
-    // ofstream my2out("tsdfvalue.txt");
+    // ofstream my2out("tSDFue.txt");
     // ofstream depthout("depth.txt");
     // ofstream locationout("location.txt");
     // ofstream sdfout("sdf.txt");
@@ -139,8 +139,8 @@ bool Fusion::SurfaceReconstruction(
 
                     // get TSDF and weight already stored in the current model
                     // size_t voxel_index = x + (y * volumeSize[0]) + (z * volumeSize[0] * volumeSize[1]);
-                    // const float old_tsdf = volume.GetSDFVal(location);
-                    const float old_weight = volume.GetWeightVal(location);
+                    // const float old_tsdf = volume.GetSDF(location);
+                    const float old_weight = volume.GetWeight(location);
                     const float new_weight = 1.0f;
 
                     // get updated TSDF and weight
@@ -148,8 +148,8 @@ bool Fusion::SurfaceReconstruction(
                                                (old_weight + new_weight);
                     const float updated_weight = old_weight + new_weight;
 
-                    volume.SetSDFVal(location, updated_tsdf);
-                    volume.SetWeightVal(location, updated_weight);
+                    volume.SetSDF(location, updated_tsdf);
+                    volume.SetWeight(location, updated_weight);
 
                     // test
                     // tsdfout << "idx" << volume.location2idx(location) << endl;
@@ -158,7 +158,7 @@ bool Fusion::SurfaceReconstruction(
                     if (sdf <= truncationDistance / 2 && sdf >= -truncationDistance / 2)
                     {
 
-                        Vector4uc voxel_color = volume.GetColorVal(location);
+                        Vector4uc voxel_color = volume.GetColor(location);
                         const Vector4uc image_color = cur_Frame.getColorMap()[uv.x() + (uv.y() * width)];
 
                         voxel_color[0] = (old_weight * voxel_color[0] + new_weight * image_color[0]) /
@@ -169,20 +169,13 @@ bool Fusion::SurfaceReconstruction(
                                          (old_weight + new_weight);
                         voxel_color[3] = (old_weight * voxel_color[3] + new_weight * image_color[3]) /
                                          (old_weight + new_weight);
-                        volume.SetColorVal(location, voxel_color);
+                        volume.SetColor(location, voxel_color);
                     }
                 }
                 // my2out << "idx" << volume.xyz2idx(x, y, z) << endl;
-                // my2out << "tsdf" << volume.GetSDFVal(location) << endl;
+                // my2out << "tsdf" << volume.GetSDF(location) << endl;
             }
         }
     }
-
-    // my3out.close();
-    // depthout.close();
-    // sdfout.close();
-    // tsdfout.close();
-    // locationout.close();
-    // camout.close();
     return true;
 }

@@ -17,12 +17,16 @@ namespace util
     class Camera
     {
     public:
+        Camera(Matrix3f intrinsics, Matrix4f extrainsics): Intrinsics{intrinsics}, Extrinsics{extrainsics}, 
+            InvExtrinsics{extrainsics.inverse()} {}
+
         // Vector3i camera2pixel(const Vector4f location) const {
 
         // }
         // Vector3i pixel2camera(const Vector3i pixel) const {
 
         // }
+        
         Vector4f world2camera(const Vector4f location) const
         {
             return Extrinsics * location;
@@ -32,7 +36,7 @@ namespace util
             return InvExtrinsics * location;
         }
 
-        Matrix3f getIntrinsics()
+        Matrix3f& getIntrinsics()
         {
             return Intrinsics;
         }
@@ -40,7 +44,6 @@ namespace util
     private:
         Matrix3f Intrinsics;
         Matrix4f Extrinsics;
-        Matrix4f InvIntrinsics;
         Matrix4f InvExtrinsics;
     };
 }
