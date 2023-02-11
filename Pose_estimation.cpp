@@ -185,7 +185,7 @@ void Pose::outlier_check(const std::vector<Vertex>& frame_data,
 
     // version 2: without parallel
 
-    SimpleMesh mesh;
+    // SimpleMesh mesh;
     for(auto it = matches.begin(); it != matches.end(); ++it){
 
         int cur_idx = it->first;
@@ -216,18 +216,17 @@ void Pose::outlier_check(const std::vector<Vertex>& frame_data,
                 (previous_global_normal.norm() * current_global_normal.norm()));
                 normal_angle = normal_angle * 180/PI;
                 if(normal_angle < angle_threshold){
-
                     // std::lock_guard<std::mutex> guard(mut);
-                    Mesh::add_point(mesh, previous_global_vertex, Vector4uc{255, 0, 0, 255});
-                    Mesh::add_point(mesh, current_global_vertex, Vector4uc{0, 255, 0, 255});
+                    // Mesh::add_point(mesh, previous_global_vertex, Vector4uc{255, 0, 0, 255});
+                    // Mesh::add_point(mesh, current_global_vertex, Vector4uc{0, 255, 0, 255});
                     selected_matches.insert(std::pair<int, int>(cur_idx, prv_idx));  
                     error += distance;
                 }
             }
         }
-    }    
-    if (!mesh.WriteColoredMesh("../results/corr_pts.off"))
-        throw std::runtime_error("corr pts: check pth");
+    }
+    // if (!mesh.WriteColoredMesh("../results/corr_pts.off"))
+    //     throw std::runtime_error("corr pts: check pth");
 }
 
 void Pose::incremental_caculation   (const std::vector<Vertex>& frame_data,
