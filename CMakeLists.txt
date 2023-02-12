@@ -6,7 +6,7 @@ project(${PROJECT_NAME})
 
 
 set(LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Libs CACHE PATH "Path to lib folder")
-#set(OpenCV_DIR ${LIBRARY_DIR}/build)
+set(OpenCV_DIR ${LIBRARY_DIR}/build)
 
 # Use pre-compiled libraries on Windows
 if(WIN32)
@@ -27,6 +27,15 @@ find_package(Eigen3 REQUIRED)
 include_directories(${Eigen3_INCLUDE_DIRS})
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
+message(STATUS "==> Included OpenCV dir: " ${OpenCV_INCLUDE_DIRS})
+
+find_package(CUDA REQUIRED)
+IF (CUDA_FOUND)
+    include_directories(${CUDA_INCLUDE_DIRS})
+    message(STATUS "==> Found CUDA： " ${CUDA_INCLUDE_DIRS})
+    # Optional: Specify the arch of your CUDA hardware here
+    SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3;-std=c++17 -gencode arch=compute_86,code=sm_86 --expt-relaxed-constexpr )
+ENDIF ()
 
 set(HEADERS 
     Eigen.h
@@ -40,9 +49,9 @@ set(HEADERS
     RayCasting.h
     SurfaceReconstruction.hpp
     MarchingCubes.h
-    MarchingCubes.h
     SimpleMesh.h
     Mesh.h
+    cuda/ray_casting_cuda.cuh
 )
 
 set(SOURCES
@@ -55,17 +64,22 @@ set(SOURCES
     SurfaceReconstruction.cpp
 )
 
+set(CUDA_SOURCES
+    cuda/ray_casting_cuda.cu
+)
+cuda_add_library(raycast ${CUDA_SOURCES})
 
+include_directories(cuda)
 link_directories(${FreeImage_LIBRARY_DIR})
 link_directories(${OpenCV_INCLUDE_DIR})
 include_directories(${OpenCV_INCLUDE_DIRS})
-
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${EIGEN3_INCLUDE_DIR})
 
 
 add_executable(KinectFusion ${HEADERS} ${SOURCES})
 target_include_directories(KinectFusion PUBLIC ${EIGEN3_INCLUDE_DIR} ${FreeImage_INCLUDE_DIR} ${OpenCV_INCLUDE_DIR})
-target_link_libraries(KinectFusion general Eigen3::Eigen freeimage ${OpenCV_LIBS})
-
+target_link_libraries(KinectFusion general Eigen3::Eigen freeimage ${OpenCV_LIBS} raycast ${CUDA_LIBRARIES} )
 
 
 if(WIN32)

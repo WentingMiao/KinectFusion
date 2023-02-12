@@ -13,10 +13,10 @@ struct Vertex{
 	// color stored as 4 unsigned char,  Vector4uc(0,0,0,0) represents invalid color
 	Vector4uc color; 
     //normal of the point , Vector3f(MINF, MINF, MINF) represents invalid normal
-    Vector3f normal = Vector3f{MINF, MINF, MINF};
+    Vector3f normal;
     float depth;
-    Vertex(Vector4f p = Vector4f{MINF, MINF, MINF, MINF}, Vector4uc c = Vector4uc{0,0,0,0}, float d = MINF)
-    : position{p}, color{c}, depth{d} {};
+    Vertex(Vector4f p = Vector4f{MINF, MINF, MINF, MINF}, Vector4uc c = Vector4uc{0,0,0,0}, float d = MINF, Vector3f n = Vector3f{MINF, MINF, MINF})
+    : position{p}, color{c}, depth{d}, normal{n} {};
     // make invalid vertex if no argument provided
 };
 Vector3f cross(Vector4f v1, Vector4f v2);

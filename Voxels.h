@@ -10,7 +10,7 @@
 // invalid Color value: Vector4uc(0, 0, 0, 0)
 struct VoxelElement
 {
-    float sdf = 0.5; // agree with tuencate distance
+    float sdf = 1; // agree with tuencate distance
     float weight = 0;
     Vector4uc color = Vector4uc(0, 0, 0, 0);
 };
@@ -24,9 +24,9 @@ public:
         _valid_location_range = Matrix<float, 3, 2>{{_origin(0), _origin(0) + _grid_len * size[0]},
                                                     {_origin(1), _origin(1) + _grid_len * size[1]},
                                                     {_origin(2), _origin(2) + _grid_len * size[2]}};
-        std::cout << "Voxel info\n";
-        std::cout << "grid len: " << grid_len << std::endl;
-        std::cout << "location range: \n" << _valid_location_range << std::endl;
+        // std::cout << "Voxel info\n";
+        // std::cout << "grid len: " << grid_len << std::endl;
+        // std::cout << "location range: \n" << _valid_location_range << std::endl;
     };
     ~VoxelArray() = default;
     bool isValidLocation(const Vector4f &location) const;
@@ -66,10 +66,10 @@ public:
     // index to xyz
     std::array<unsigned, 3> idx2xyz(const unsigned idx) const;
 
+    std::vector<VoxelElement> voxel;
 private:
     Vector3f _origin;                          // corner of grid , {-3, -3, 0} may be appropriate
     std::array<unsigned, 3> _size;             // number of voxel on xyz dimension
-    std::vector<VoxelElement> voxel;
     const float _grid_len;
     Matrix<float, 3, 2> _valid_location_range; // valid range of world location
     Matrix4f _Pose;
