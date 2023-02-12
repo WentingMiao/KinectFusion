@@ -230,6 +230,7 @@ namespace kinectfusion
 				surface_normal.normalize();
 				ret_vertices[y * width + x].position = Vec3to4(surface_location_voxel + *origin);
 				ret_vertices[y * width + x].normal = surface_normal;
+				break;
 			}
 		}
 		// return value for invalid point?
