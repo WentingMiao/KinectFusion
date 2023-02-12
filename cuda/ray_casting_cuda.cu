@@ -122,13 +122,12 @@ namespace kinectfusion
 		const float *step_size, // turncation distance / 2
 		const Vec3fda *origin,
 		const int2 *img_size,
-		Vector3f *ret_positions,
-		Vector3f *ret_normals)
+		Vertex* ret_vertices)
 	{
 		// processing pixel at x column, y row
 		int x = blockIdx.x * blockDim.x + threadIdx.x;
 		int y = blockIdx.y * blockDim.y + threadIdx.y;
-		const int &height = img_size->y;
+		const int &width = img_size->x;
 		if (x >= img_size->x || y >= img_size->y)
 			return;
 
@@ -229,15 +228,15 @@ namespace kinectfusion
 					break;
 
 				surface_normal.normalize();
-				ret_positions[y * height + x] = surface_location_voxel + *origin;
-				ret_normals[y * height + x] = surface_normal;
+				ret_vertices[y * width + x].position = Vec3to4(surface_location_voxel + *origin);
+				ret_vertices[y * width + x].normal = surface_normal;
 			}
 		}
 		// return value for invalid point?
 
 	}
 
-	std::tuple<std::vector<Vector3f>, std::vector<Vector3f>>
+	std::vector<Vertex>
 	ray_casting(
 		const VoxelArray &volume,
 		const float step_size,
@@ -285,37 +284,26 @@ namespace kinectfusion
 		cudaMalloc(&d_img_size, sizeof(int2));
 		cudaMemcpy(d_img_size, &img_size, sizeof(int2), cudaMemcpyHostToDevice);
 
-		Vector3f *d_ret_positions;
-		Vector3f *d_ret_normals;
+		Vertex *d_ret_vertices;
 		// unifier memory
-		cudaMallocManaged((void **)&d_ret_positions, sizeof(Vector3f) * width * height);
-		cudaMallocManaged((void **)&d_ret_normals, sizeof(Vector3f) * width * height);
+		cudaMallocManaged((void **)&d_ret_vertices, sizeof(Vertex) * width * height);
 
-		dim3 block(16, 16);
+		dim3 block(32, 32);
 		dim3 grid((width + block.x - 1) / block.x,
 				  (height + block.y - 1) / block.y);
-		kinectfusion::ray_casting_kernel<<<grid, block>>>(d_tsdf_data, d_intrinsics, d_extrinsics, d_voxel_size, d_grid_len, d_step_size, d_origin, d_img_size, d_ret_positions, d_ret_normals);
+		kinectfusion::ray_casting_kernel<<<grid, block>>>(d_tsdf_data, d_intrinsics, d_extrinsics, d_voxel_size, d_grid_len, d_step_size, d_origin, d_img_size, d_ret_vertices);
 		HANDLE_ERROR(cudaDeviceSynchronize());
-		#ifdef DEBUG
-		for (int i = 0; i < width; i++)
-			for (int j = 0; j < height; j++)
-				printf("Processing pixel: %d row, %d col; obtained location: %f %f %f\n", j, i, 
-					d_ret_positions[j * width + i].x(), d_ret_positions[j * width + i].y(), d_ret_positions[j * width + i].z());
-		#endif
-		std::vector<Vector3f> vertices;
-		vertices.insert(vertices.end(), &d_ret_positions[0], &d_ret_positions[width * height]);
-		std::vector<Vector3f> normals;
-		normals.insert(normals.end(), &d_ret_normals[0], &d_ret_normals[width * height]);
+		std::vector<Vertex> vertices;
+		vertices.insert(vertices.end(), &d_ret_vertices[0], &d_ret_vertices[width * height]);
 		cudaFree(d_extrinsics);
 		cudaFree(d_grid_len);
 		cudaFree(d_img_size);				
 		cudaFree(d_intrinsics);
 		cudaFree(d_origin);
-		cudaFree(d_ret_normals);
-		cudaFree(d_ret_positions);
+		cudaFree(d_ret_vertices);
 		cudaFree(d_step_size);
 		cudaFree(d_tsdf_data);
 		cudaFree(d_voxel_size);
-		return std::make_tuple(vertices, normals);
+		return vertices;
 	}
 };

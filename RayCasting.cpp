@@ -1,6 +1,8 @@
 #include "RayCasting.h"
 #include <iostream>
+#include "Mesh.h"
 #include <vector>
+
 namespace
 {
     Vector4uc uc_subtraction(const Vector4uc &a, const Vector4uc &b)
@@ -28,10 +30,20 @@ std::tuple<float*, BYTE*> RayCasting::SurfacePrediction()
     unsigned height = _height;
     float* depth = new float[width * height];
     BYTE* rgba = new BYTE[width * height * 4];
+    
+    #ifdef DEBUG
+    SimpleMesh mesh;
+    ofstream outfile("../results/cpu_cast.log");
+    #endif
     for (unsigned row = 0; row < height; ++row)
         for (unsigned col = 0; col < width; ++col)
         {
             Vertex ret = CastPixel(col, row);
+            #ifdef DEBUG
+            outfile << "Pixel: " << col << ", " << row << ", location: " <<  ret.position.transpose() << std::endl;
+            if (ret.position.x() != MINF)
+                Mesh::add_point(mesh, util::Vec4to3(ret.position), Vector4uc{0, 255, 0, 255});
+            #endif
             rgba[4 * (width * row + col)] = ret.color(0);
             rgba[4 * (width * row + col) + 1] = ret.color(1);
             rgba[4 * (width * row + col) + 2] = ret.color(2);
@@ -41,6 +53,11 @@ std::tuple<float*, BYTE*> RayCasting::SurfacePrediction()
             else
                 depth[width * row + col] = ret.depth;
         }
+    #ifdef DEBUG
+    auto time = clock();
+    if (!mesh.WriteColoredMesh("../results/" + std::to_string(static_cast<float>(time)) + "_cpu_cast_vertices.off"))
+        throw std::runtime_error("Out mesh: invalid filename");
+    #endif
     return std::make_tuple(depth, rgba);
 }
 
