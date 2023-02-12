@@ -209,7 +209,7 @@ void Pose::outlier_check(const std::vector<Vertex>& frame_data,
             
             const float distance = (previous_global_vertex - current_global_vertex).norm();
             
-            // std::cout << "Distance: " << distance << ", Prev: " << previous_global_vertex.transpose()  << ", Curr: " << current_global_vertex.transpose() << std::endl;
+            // std::cout << "Distance: " << distance << ", Prev normal: " << previous_global_normal.transpose()  << ", Curr: " << current_global_normal.transpose() << std::endl;
             if (distance <= distance_threshold){
 
                 auto normal_angle = acos(previous_global_normal.dot(current_global_normal) / 
@@ -217,8 +217,6 @@ void Pose::outlier_check(const std::vector<Vertex>& frame_data,
                 normal_angle = normal_angle * 180/PI;
                 if(normal_angle < angle_threshold){
                     // std::lock_guard<std::mutex> guard(mut);
-                    // Mesh::add_point(mesh, previous_global_vertex, Vector4uc{255, 0, 0, 255});
-                    // Mesh::add_point(mesh, current_global_vertex, Vector4uc{0, 255, 0, 255});
                     selected_matches.insert(std::pair<int, int>(cur_idx, prv_idx));  
                     error += distance;
                 }
