@@ -108,7 +108,8 @@ int execute()
         // ray casting
         begin = clock();
         const float step_size = grid_len / 2;
-        kinectfusion::ray_casting(volume, step_size, &depthIntrinsics, &depthExtrinsics, width, height);
+        auto [vertices, normals] = kinectfusion::ray_casting(volume, step_size, &depthIntrinsics, &depthExtrinsics, width, height);
+        std::cout << "num vertices: " <<  vertices.size() << " num_normals: " <<  normals.size() << std::endl;
         end = clock();
         duration = double(end - begin) / CLOCKS_PER_SEC;
         std::cout << "ray casting finish in " << duration << " secs" << std::endl;
@@ -140,21 +141,3 @@ int main()
     res = execute();
     return res;
 }
-
-// generate frame mesh
-// vector<Vertex> vertices = currentFrame.getVertices(USE_ICP);
-
-// for (auto it = vertices.begin(); it != vertices.end(); ++it)
-//     if (it->position.x() != MINF)
-//         it->position = util::Vec3to4(pose.TransformToVertex(pose.Vector4fToVector3f(it->position), cur_pose));
-// stringstream ss;
-// ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << ".off";
-// cout << ss.str() << endl;
-// if (!currentFrame.writeMesh(vertices, ss.str(), 0))
-//     throw std::runtime_error("Failed to write mesh!\nCheck file path!");
-// ss.flush();
-// ss << filenameBaseOut << sensor.GetCurrentFrameCnt() << "_last.off";
-// cout << ss.str() << endl;
-// vector<Vertex> prev_vertices = previousFrame.getVertices(USE_ICP);
-// if (!previousFrame.writeMesh(prev_vertices, ss.str(), 0))
-//     throw std::runtime_error("Failed to write mesh!\nCheck file path!");

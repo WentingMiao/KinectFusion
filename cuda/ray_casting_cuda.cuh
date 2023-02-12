@@ -29,8 +29,8 @@ namespace kinectfusion
 		Vector3f *ret_positions,
 		Vector3f *ret_normals);
 	
-	// std::tuple<std::vector<Vector3f>, std::vector<Vector3f>> 
-	void ray_casting (
+	std::tuple<std::vector<Vector3f>, std::vector<Vector3f>> 
+	ray_casting (
 		const VoxelArray &volume,
 		const float step_size,  // turnc / 2
 		const Matrix3f *Intrinsics,

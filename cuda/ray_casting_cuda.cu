@@ -11,24 +11,6 @@ static void HandleError(cudaError_t err, const char *file, int line)
 	}
 }
 
-/*
-ray casting
-1. 拿到pose, tsdf, width, height
-2. 计算像素位置（camera coordinate内）
-3. 转换像素位置到 world coordinate内
-4. 沿光线访问tsdf元素
-*/
-
-//  dim3 blockSize(32, 32);
-//     dim3 gridSize((width + blockSize.x - 1) / blockSize.x,
-//         (height + blockSize.y - 1) / blockSize.y);
-
-// 可变matrix内存分配有问题
-// Matrix<float, 1, 6> *d_A;
-// cudaMalloc((void **)&d_A, sizeof(Matrix<float, 1, 6>) * match_count);
-// float *d_b;
-// cudaMalloc((void **)&d_b, sizeof(float) * match_count);
-
 namespace kinectfusion
 {
 	__device__
@@ -255,8 +237,8 @@ namespace kinectfusion
 
 	}
 
-	// std::tuple<std::vector<Vector3f>, std::vector<Vector3f>>
-	void ray_casting(
+	std::tuple<std::vector<Vector3f>, std::vector<Vector3f>>
+	ray_casting(
 		const VoxelArray &volume,
 		const float step_size,
 		const Matrix3f *Intrinsics,
@@ -320,6 +302,10 @@ namespace kinectfusion
 				printf("Processing pixel: %d row, %d col; obtained location: %f %f %f\n", j, i, 
 					d_ret_positions[j * width + i].x(), d_ret_positions[j * width + i].y(), d_ret_positions[j * width + i].z());
 		#endif
+		std::vector<Vector3f> vertices;
+		vertices.insert(vertices.end(), &d_ret_positions[0], &d_ret_positions[width * height]);
+		std::vector<Vector3f> normals;
+		normals.insert(normals.end(), &d_ret_normals[0], &d_ret_normals[width * height]);
 		cudaFree(d_extrinsics);
 		cudaFree(d_grid_len);
 		cudaFree(d_img_size);				
@@ -330,5 +316,6 @@ namespace kinectfusion
 		cudaFree(d_step_size);
 		cudaFree(d_tsdf_data);
 		cudaFree(d_voxel_size);
+		return std::make_tuple(vertices, normals);
 	}
 };
