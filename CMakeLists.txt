@@ -1,13 +1,12 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.11)
 
 set(PROJECT_NAME KinectFusion)
 project(${PROJECT_NAME})
 
 
 
-
 set(LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Libs CACHE PATH "Path to lib folder")
-#set(OpenCV_DIR ${LIBRARY_DIR}/build)
+set(OpenCV_DIR ${LIBRARY_DIR}/build)
 
 # Use pre-compiled libraries on Windows
 if(WIN32)
@@ -27,11 +26,14 @@ set(CMAKE_BUILD_TYPE Debug)
 
 #find required packages 
 find_package(Eigen3 REQUIRED)
+include_directories(${Eigen3_INCLUDE_DIRS})
 find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
+message(STATUS "==> Included OpenCV dir: " ${OpenCV_INCLUDE_DIRS})
 
 find_package(CUDA REQUIRED)
 IF (CUDA_FOUND)
-    include_directories("${CUDA_INCLUDE_DIRS}")
+    include_directories(${CUDA_INCLUDE_DIRS})
     message(STATUS "==> Found CUDA： " ${CUDA_INCLUDE_DIRS})
     # Optional: Specify the arch of your CUDA hardware here
     SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3;-std=c++17 -gencode arch=compute_86,code=sm_86 --expt-relaxed-constexpr )
@@ -45,6 +47,13 @@ set(HEADERS
     Pose_estimation.h
     SimpleMesh.h 
     PointCloud.h   
+    Voxels.h
+    RayCasting.h
+    SurfaceReconstruction.hpp
+    MarchingCubes.h
+    SimpleMesh.h
+    Mesh.h
+    cuda/ray_casting_cuda.cuh
     cuda/Pose_estimation_cuda.h  
 )
 
@@ -53,15 +62,20 @@ set(SOURCES
     FreeImageHelper.cpp
     Frame.cpp
     Pose_estimation.cpp
+    Voxels.cpp
+    RayCasting.cpp
+    SurfaceReconstruction.cpp
 )
 
-# add cuda files
 set(CUDA_SOURCES
+    cuda/ray_casting_cuda.cu
     cuda/Pose_estimation_cuda.cu
 )
 
-cuda_add_library(Pose_estimation_cuda ${CUDA_SOURCES})
 
+cuda_add_library(cuda_sources ${CUDA_SOURCES})
+
+include_directories(cuda)
 link_directories(${FreeImage_LIBRARY_DIR})
 link_directories(${OpenCV_INCLUDE_DIR})
 include_directories(${OpenCV_INCLUDE_DIRS})
@@ -72,7 +86,7 @@ include_directories(cuda)
 
 add_executable(KinectFusion ${HEADERS} ${SOURCES})
 target_include_directories(KinectFusion PUBLIC ${EIGEN3_INCLUDE_DIR} ${FreeImage_INCLUDE_DIR} ${OpenCV_INCLUDE_DIR})
-target_link_libraries(KinectFusion general Eigen3::Eigen freeimage ${OpenCV_LIBS} tbb cudart Pose_estimation_cuda)
+target_link_libraries(KinectFusion general Eigen3::Eigen freeimage ${OpenCV_LIBS} cuda_sources ${CUDA_LIBRARIES})
 
 
 

@@ -13,7 +13,6 @@ Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics,
             _depthMap[i] = depthMap[i];
             _colorMap[i] = Vector4uc(colorMap[4*i], colorMap[4*i+1], colorMap[4*i+2], colorMap[4*i+3]);
         }
-
     }else{
          /* depth map with bilateralFilter */ 
         vector<float> unfileredMap = vector<float>(_width * _height);
@@ -21,8 +20,6 @@ Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics,
              unfileredMap[i] = depthMap[i];
              _colorMap[i] = Vector4uc(colorMap[4*i], colorMap[4*i+1], colorMap[4*i+2], colorMap[4*i+3]);
         }
-
-  
         applyBilateralFilter( unfileredMap,  _depthMap, _width, _height);   
         
     }
@@ -47,14 +44,7 @@ Frame::Frame(float* depthMap,  BYTE* colorMap, Eigen::Matrix3f &depthIntrinsics,
 
         _pyramidHeight.push_back(height);
         _pyramidWidth.push_back(width);
-
-        
     }
-
-    //cout <<"here"<<endl;
-    //cout<< (int)_colorMap[0](0)<<endl;
-   
-
 }
 
 
@@ -82,7 +72,6 @@ vector<Eigen::Vector4f> Frame::getCameraPoints(){
                 
 				// point_c = Vector4f(x, y, z, 1.0);
                 points[idx] =  _trajectory.inverse() * _depthExtrinsics.inverse() * Vector4f(x, y, z, 1.0);
-                
             }
         }
     }

@@ -151,7 +151,6 @@ bool FreeImage::SaveImageToFile(const std::string& filename, bool flipY)
 
 			for (unsigned int c = 0; c < nChannels && c < 3; ++c)
 			{
-				//col[c] = std::min(std::max(0, (int)(255.0f*data[nChannels * (w*j + i) + c])), 255);
 				col[c] = std::min(std::max(0, (int)(255.0f*data[nChannels * (w*j + i) + c])), 255);
 			}
 

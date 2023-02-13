@@ -1,5 +1,5 @@
 #include "Pose_estimation.h"
-
+#include "Mesh.h"
 #define PI acos(-1)
 std::mutex mut;
 
@@ -239,8 +239,6 @@ void Pose::incremental_caculation   (MatrixXf& A,
         MatrixXf ATb = A.transpose() * b;
         VectorXf x(6);
         x = ATA.ldlt().solve(ATb);
-        // x = A.bdcSvd(ComputeThinU | ComputeThinV).solve(b);
-        // x = A.fullPivLu().solve(b);
 
         float alpha = x(0), beta = x(1), gamma = x(2);
 

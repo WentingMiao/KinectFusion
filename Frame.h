@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Eigen.h"
 #include "VirtualSensor.h"
 #include "opencv2/opencv.hpp"
@@ -11,17 +10,17 @@ struct Vertex{
     // position stored as 4 floats (4th component represents supposed to be 1.0)
     // Vector4f(MINF, MINF, MINF, MINF) represents invalid point
 	Vector4f position;
-
 	// color stored as 4 unsigned char,  Vector4uc(0,0,0,0) represents invalid color
 	Vector4uc color; 
-
     //normal of the point , Vector3f(MINF, MINF, MINF) represents invalid normal
     Vector3f normal;
+    float depth;
+    Vertex(Vector4f p = Vector4f{MINF, MINF, MINF, MINF}, Vector4uc c = Vector4uc{0,0,0,0}, float d = MINF, Vector3f n = Vector3f{MINF, MINF, MINF})
+    : position{p}, color{c}, depth{d}, normal{n} {};
+    // make invalid vertex if no argument provided
 };
-
+Vector3f cross(Vector4f v1, Vector4f v2);
 class Frame{
-
-    
     public:
 
         //Frame constructor
@@ -93,5 +92,4 @@ class Frame{
 
         vector<Matrix3f> _allDepthIntrinsic;
         vector<Vertex> vertices;
-        
 };
