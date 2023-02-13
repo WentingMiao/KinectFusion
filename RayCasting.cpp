@@ -1,6 +1,8 @@
 #include "RayCasting.h"
 #include <iostream>
+#include "Mesh.h"
 #include <vector>
+
 namespace
 {
     Vector4uc uc_subtraction(const Vector4uc &a, const Vector4uc &b)
@@ -28,10 +30,20 @@ std::tuple<float*, BYTE*> RayCasting::SurfacePrediction()
     unsigned height = _height;
     float* depth = new float[width * height];
     BYTE* rgba = new BYTE[width * height * 4];
+    
+    #ifdef DEBUG
+    SimpleMesh mesh;
+    ofstream outfile("../results/cpu_cast.log");
+    #endif
     for (unsigned row = 0; row < height; ++row)
         for (unsigned col = 0; col < width; ++col)
         {
             Vertex ret = CastPixel(col, row);
+            #ifdef DEBUG
+            outfile << "Pixel: " << col << ", " << row << ", location: " <<  ret.position.transpose() << std::endl;
+            if (ret.position.x() != MINF)
+                Mesh::add_point(mesh, util::Vec4to3(ret.position), Vector4uc{0, 255, 0, 255});
+            #endif
             rgba[4 * (width * row + col)] = ret.color(0);
             rgba[4 * (width * row + col) + 1] = ret.color(1);
             rgba[4 * (width * row + col) + 2] = ret.color(2);
@@ -41,27 +53,35 @@ std::tuple<float*, BYTE*> RayCasting::SurfacePrediction()
             else
                 depth[width * row + col] = ret.depth;
         }
+    #ifdef DEBUG
+    auto time = clock();
+    if (!mesh.WriteColoredMesh("../results/" + std::to_string(static_cast<float>(time)) + "_cpu_cast_vertices.off"))
+        throw std::runtime_error("Out mesh: invalid filename");
+    #endif
     return std::make_tuple(depth, rgba);
 }
 
 Vertex RayCasting::CastPixel(const unsigned x, const unsigned y)
 {
-    Ray r{tsdf.Camera2World(Vector4f{0, 0, 0, 0}), Pixel2World(x, y), tsdf.getGridlen() / 2, 0.0f};
+    auto start = tsdf.World2Camera({0, 0, 0, 0});
+    auto direction = (tsdf.World2Camera(Vector4f{static_cast<float>(x), static_cast<float>(y), 1, 1}) - tsdf.World2Camera({0, 0, 0, 0})).normalized();
+    auto step_size = tsdf.getGridlen() / 2;
     Vector4f lastLocation;
-    Vector4f currLocation;
-    while (tsdf.isValidLocation(r.getLocation()))
+    Vector4f currLocation = start;
+
+    while (tsdf.isValidLocation(currLocation) && tsdf.isValidLocation(currLocation + direction * step_size))
     {
         lastLocation = currLocation;
-        currLocation = r.getLocation();
+        currLocation += direction * step_size;
         if (tsdf.GetSDF(lastLocation) * tsdf.GetSDF(currLocation) < 0)
-            return interpolation(r, lastLocation, currLocation);
+            return interpolation(lastLocation, currLocation);
         else
-            r.step();
+            currLocation += direction;
     }
     return Vertex{};
 }
 
-Vertex RayCasting::interpolation(const Ray &r, const Vector4f &loc1, const Vector4f &loc2)
+Vertex RayCasting::interpolation(const Vector4f &loc1, const Vector4f &loc2)
 {
     /*
     loc1: last
@@ -72,7 +92,6 @@ Vertex RayCasting::interpolation(const Ray &r, const Vector4f &loc1, const Vecto
         x* = x2 + factor * x2x1
     */
     float factor = (tsdf.GetSDF(loc2) / (tsdf.GetSDF(loc2) - tsdf.GetSDF(loc1)));
-    // float depth = r._distance - factor * r._step_size;
     Vector4f est_location = loc2 + factor * (loc1 - loc2);
     Vector4uc color = uc_addition(
         tsdf.GetColor(loc2),
@@ -99,13 +118,4 @@ float RayCasting::World2Depth(Vector4f location)
     location = tsdf.World2Camera(location); // back to camera
     location /= location(3); // homogeneous back to heterogeneous
     return location(2);
-}
-
-
-Vector4f RayCasting::Ray::getLocation()
-{
-    Vector4f loc;
-    loc.block<3, 1>(0, 0) = _origin + _distance * _direction;
-    loc(3) = 1;
-    return loc;
 }
