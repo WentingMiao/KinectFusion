@@ -63,25 +63,22 @@ std::tuple<float*, BYTE*> RayCasting::SurfacePrediction()
 
 Vertex RayCasting::CastPixel(const unsigned x, const unsigned y)
 {
-    auto start = tsdf.World2Camera({0, 0, 0, 0});
-    auto direction = (tsdf.World2Camera(Vector4f{static_cast<float>(x), static_cast<float>(y), 1, 1}) - tsdf.World2Camera({0, 0, 0, 0})).normalized();
-    auto step_size = tsdf.getGridlen() / 2;
+    Ray r{tsdf.Camera2World(Vector4f{0, 0, 0, 0}), Pixel2World(x, y), tsdf.getGridlen() / 2, 0.0f};
     Vector4f lastLocation;
-    Vector4f currLocation = start;
-
-    while (tsdf.isValidLocation(currLocation) && tsdf.isValidLocation(currLocation + direction * step_size))
+    Vector4f currLocation;
+    while (tsdf.isValidLocation(r.getLocation()))
     {
         lastLocation = currLocation;
-        currLocation += direction * step_size;
+        currLocation = r.getLocation();
         if (tsdf.GetSDF(lastLocation) * tsdf.GetSDF(currLocation) < 0)
-            return interpolation(lastLocation, currLocation);
+            return interpolation(r, lastLocation, currLocation);
         else
-            currLocation += direction;
+            r.step();
     }
     return Vertex{};
 }
 
-Vertex RayCasting::interpolation(const Vector4f &loc1, const Vector4f &loc2)
+Vertex RayCasting::interpolation(const Ray &r, const Vector4f &loc1, const Vector4f &loc2)
 {
     /*
     loc1: last
@@ -92,6 +89,7 @@ Vertex RayCasting::interpolation(const Vector4f &loc1, const Vector4f &loc2)
         x* = x2 + factor * x2x1
     */
     float factor = (tsdf.GetSDF(loc2) / (tsdf.GetSDF(loc2) - tsdf.GetSDF(loc1)));
+    // float depth = r._distance - factor * r._step_size;
     Vector4f est_location = loc2 + factor * (loc1 - loc2);
     Vector4uc color = uc_addition(
         tsdf.GetColor(loc2),
@@ -118,4 +116,13 @@ float RayCasting::World2Depth(Vector4f location)
     location = tsdf.World2Camera(location); // back to camera
     location /= location(3); // homogeneous back to heterogeneous
     return location(2);
+}
+
+
+Vector4f RayCasting::Ray::getLocation()
+{
+    Vector4f loc;
+    loc.block<3, 1>(0, 0) = _origin + _distance * _direction;
+    loc(3) = 1;
+    return loc;
 }
