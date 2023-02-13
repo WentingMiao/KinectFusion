@@ -11,8 +11,16 @@
 #include <iterator>
 #include <vector>
 #include <stdexcept>
-
+#include <cuda_runtime.h>
+#include <vector_types.h>
+#include "Pose_estimation_cuda.h"
+#include <tuple>
 constexpr bool DEBUG{true};
+
+// struct Match {
+//     int cur_idx;
+//     int prv_idx;
+// };
 
 class Pose{
 public:
@@ -55,6 +63,11 @@ void data_association(const std::vector<Vertex>& frame_data,
                       const unsigned int& height,
                       std::unordered_map<int, int>& matches);
 
+// void data_association_cuda(const std::vector<Vertex>& frame_data,
+//                            const Matrix3f &Intrinsics,
+//                            const unsigned int& width,
+//                            const unsigned int& height,
+//                            std::unordered_map<int, int>& matches);
 /**
  * @description: outlier check step. Filter out pairs that meet the requirements
  * @return {*}
@@ -71,9 +84,8 @@ void outlier_check( const std::vector<Vertex>& frame_data,
  * @description: Point to Plane ICP step. we update member m_current_pose with incremental
  * @return {*}
  */
-void incremental_caculation(const std::vector<Vertex>& frame_data,
-                            const std::vector<Vertex>& model_data,
-                            std::unordered_map<int, int>& selected_matches);
+void incremental_caculation   ( MatrixXf& A,
+                                VectorXf& b);
 
 
 /**

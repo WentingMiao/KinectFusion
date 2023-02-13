@@ -76,7 +76,7 @@ int execute(){
     // Initialization completed (frame 0 finished)
 
     // frame 1 start
-    while(sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 2){
+    while(sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() <= 1){
         Matrix4f depthExtrinsics = sensor.GetDepthExtrinsics();
         Matrix3f depthIntrinsics = sensor.GetDepthIntrinsics();
         Matrix4f trajectory = sensor.GetTrajectory();
