@@ -15,13 +15,12 @@ Eigen
 OpenCV  
 CUDA  
 
-
 **Structure requirement:**
  `
 1. Data folder
 	
-	Create a ```Data/``` folder on the top level and add the data file inside.
-	We use TUM RGB-D Dataset [links](https://vision.in.tum.de/data/datasets/rgbd-dataset), please set the dataset on proper location
+	Create a ```Data/``` folder on the top level and add the data file inside.  
+	We use TUM RGB-D Dataset [links](https://vision.in.tum.de/data/datasets/rgbd-dataset), please set the dataset on proper location  
 	e.g Data/rgbd_dataset_freiburg1_xyz/..
 
 2. Build directory 
