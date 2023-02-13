@@ -10,31 +10,31 @@ Kinect Fusion is a technology that allows for the reconstruction of 3D models of
 
 **Packages requirement:**
 
-FreeImage
-Eigen
-OpenCV
-CUDA
-FreeImage
+FreeImage  
+Eigen  
+OpenCV  
+CUDA  
+FreeImage  
 
 **Structure requirement:**
  `
 1. Data folder
 	
-    Create a ```Data/``` folder on the top level and add the data file inside.
-    We use TUM RGB-D Dataset [links](https://vision.in.tum.de/data/datasets/rgbd-dataset), please set the dataset on proper location
-    e.g Data/rgbd_dataset_freiburg1_xyz/..
-    
+	Create a ```Data/``` folder on the top level and add the data file inside.
+	We use TUM RGB-D Dataset [links](https://vision.in.tum.de/data/datasets/rgbd-dataset), please set the dataset on proper location
+	e.g Data/rgbd_dataset_freiburg1_xyz/..
+
 2. Build directory 
     
-    Create the ```build/``` folder and in this case, we can create an out-of-source build.
+	Create the ```build/``` folder and in this case, we can create an out-of-source build.
     
 3. Libs folder
 
-	Create a ```Libs/``` folder to store packages.
+ 	Create a ```Libs/``` folder to store packages.
 
 4. results folder
 
-    Create a ```results/``` folder to store generated result.
+ 	Create a ```results/``` folder to store generated result.
     
 # Run the project
 
@@ -47,6 +47,7 @@ make
 ./KinectFusion
 ```
 
-We provide a series of output to help you track the operation of the program. So you can see how long KinectFusion takes at each step.
+We provide a series of output to help you track the operation of the program.  
+So you can see how long KinectFusion takes at each step.  
 At the end of the execution, the program generates the complete reconstruction result `sum_out_mesh.off`
 
