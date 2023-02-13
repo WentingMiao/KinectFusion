@@ -14,7 +14,7 @@ FreeImage
 Eigen  
 OpenCV  
 CUDA  
-FreeImage  
+
 
 **Structure requirement:**
  `
