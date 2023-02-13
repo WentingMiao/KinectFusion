@@ -7,28 +7,14 @@
 #include "Frame.h"
 #include "Voxels.h"
 #include "Pose_estimation.h"
-#include "SurfaceReconstruction.hpp"
+#include "SurfaceReconstruction.h"
 #include "RayCasting.h"
 #include "Mesh.h"
-#include "cuda/ray_casting_cuda.cuh"
+#include "ray_casting_cuda.h"
 
 #define USE_ICP 1
 // 1 if use icp to optimize pose
 
-/*
-2. 需要更多封装以令各模块简洁
-    理想：
-    int main() {
-        init();
-        while (condition) {
-            projection();
-            pose estimation();
-            volume integration();
-            ray casting();
-        }
-        return 0;
-    }
-*/
 int execute()
 {
     // path to the data
@@ -49,21 +35,24 @@ int execute()
     float edgeThreshold = 10;
     bool filtered = true;
     const int max_level = 1; // layer of pyramid
+
+
     /*
         configuration of pose estimation
     */
     Eigen::Matrix4f cur_pose = Matrix4f::Identity();
-    const float distance_threshold = 0.02f;
-    const float angle_threshold = 30.0f;
+    const float distance_threshold = 0.01f;
+    const float angle_threshold = 20.0f;
     std::vector<int> num_iterations = std::vector<int>{10, 5, 4}; // from last to front
 
     /* init volume*/
     const float grid_len = 0.04;
     VoxelArray volume(std::array<unsigned, 3>{150, 150, 150}, grid_len, Vector3f{-1, -1, -1}, cur_pose);
+
     /* init return vertices */
     std::vector<std::vector<Vertex>> level_previous_vertices;
 
-    while (sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() < 10)
+    while (sensor.ProcessNextFrame() && sensor.GetCurrentFrameCnt() < 4)
     {
         std::cout << "------------Building Frame " << sensor.GetCurrentFrameCnt() << "-------------\n";
         Matrix4f trajectory = sensor.GetTrajectory(); // not used
@@ -74,13 +63,10 @@ int execute()
         Pose pose;
         if (level_previous_vertices.size() != 0)
         {
-            // Frame previousFrame(depthMap, colorMap, depthIntrinsics, depthExtrinsics, trajectory, width, height, edgeThreshold, filtered, max_level);
             auto level_intrinsics = currentFrame.getLevelCameraIntrinstics();
             auto level_current_vertices = currentFrame.getPyramidVertex(USE_ICP);
-            // auto level_previous_vertices = previousFrame.getPyramidVertex(USE_ICP);
             auto level_width = currentFrame.getLevelWidth();
             auto level_height = currentFrame.getLevelHeight();
-            // previousFrame = currentFrame;
             pose.pose_estimation(level_current_vertices,
                                  level_previous_vertices,
                                  level_intrinsics,
@@ -91,8 +77,6 @@ int execute()
                                  level_height,
                                  max_level,
                                  cur_pose);
-            std::cout << "New pose:" << std::endl;
-            std::cout << cur_pose << std::endl;
         }
 
         // surface reconstruction
@@ -112,49 +96,10 @@ int execute()
         level_previous_vertices.emplace_back(kinectfusion::ray_casting(volume, step_size, &depthIntrinsics, &cur_pose, width, height));
         end = clock();
         duration = double(end - begin) / CLOCKS_PER_SEC;
-        std::cout << "ray casting cuda finish in " << duration << " secs" << std::endl;
+        std::cout << "ray casting finished in " << duration << " secs" << std::endl << std::endl;
 
-        vector<Vertex> vertices = currentFrame.getVertices(USE_ICP);
-        SimpleMesh mesh, mesh_gt;
-        for (unsigned row = 0; row < height; ++row)
-            for (unsigned col = 0; col < width; ++col)
-            {
-                if (level_previous_vertices[0].at(row * width + col).position.x() != MINF)
-                {
-                    Mesh::add_point(mesh, util::Vec4to3(level_previous_vertices[0].at(row * width + col).position));
-                    Mesh::add_point(mesh_gt, util::Vec4to3(vertices.at(row * width + col).position), Vector4uc{0, 255, 0, 255});
-                }
-                // std::cout << "Pixel: " << col << ", " << row << " Vertex: " << level_previous_vertices[0].at(row * width + col).position.transpose() << " and Normal: " << cast_vertices.at(row * width + col).normal.transpose() << std::endl;
-            }
-        if (!mesh.WriteColoredMesh("../results/" + std::to_string(sensor.GetCurrentFrameCnt()) + "_cast_vertices.off"))
-            throw std::runtime_error("Out mesh: invalid filename");
-        if (!mesh_gt.WriteColoredMesh("../results/" + std::to_string(sensor.GetCurrentFrameCnt()) + "_gt_vertices.off"))
-            throw std::runtime_error("Out mesh_gt: invalid filename");
-        Mesh::export_mesh(volume, "../results/out_mesh.off", true);
-        // break;
-        // Mesh::export_mesh(volume, "../results/out_mesh_new.off", true);
-
-        // RayCasting cast{width, height, cur_pose, volume};
-        // begin = clock();
-        // auto [depth, rgba] = cast.SurfacePrediction();
-        // end = clock();
-        // duration = double(end - begin) / CLOCKS_PER_SEC;
-        // std::cout << "ray casting finish in " << duration << " secs" << std::endl;
-
-        // RayCasting cast{width, height, cur_pose, volume};
-        // begin = clock();
-        // auto [depth, rgba] = cast.SurfacePrediction();
-        // if (depthMap != nullptr)
-        //     delete[] depthMap;
-        // if (colorMap != nullptr)
-        //     delete[] colorMap;
-        // depthMap = depth;
-        // colorMap = rgba;
-        // end = clock();
-        // duration = double(end - begin) / CLOCKS_PER_SEC;
-        // std::cout << "ray casting finish in " << duration << " secs" << std::endl;
-        // util::generate_img(sensor, width, height, colorMap, depthMap);
     }
+    std::cout << "print sum_out_mesh...." << std::endl;
     Mesh::export_mesh(volume, "../results/sum_out_mesh.off", true);
 
     return 0;

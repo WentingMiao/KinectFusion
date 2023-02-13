@@ -20,7 +20,7 @@ if(WIN32)
 endif(WIN32)
 
 # Set C++ flags
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lcudart")
 set(CMAKE_BUILD_TYPE Debug)
 
@@ -39,53 +39,36 @@ IF (CUDA_FOUND)
     SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3;-std=c++17 -gencode arch=compute_86,code=sm_86 --expt-relaxed-constexpr )
 ENDIF ()
 
-set(HEADERS 
-    Eigen.h
-    FreeImageHelper.h
-    VirtualSensor.h
-    Frame.h
-    Pose_estimation.h
-    SimpleMesh.h 
-    PointCloud.h   
-    Voxels.h
-    RayCasting.h
-    SurfaceReconstruction.hpp
-    MarchingCubes.h
-    SimpleMesh.h
-    Mesh.h
-    cuda/ray_casting_cuda.cuh
-    cuda/Pose_estimation_cuda.h  
-)
+
 
 set(SOURCES
     main.cpp
-    FreeImageHelper.cpp
-    Frame.cpp
-    Pose_estimation.cpp
-    Voxels.cpp
-    RayCasting.cpp
-    SurfaceReconstruction.cpp
+    src/FreeImageHelper.cpp
+    src/Frame.cpp
+    src/Pose_estimation.cpp
+    src/Voxels.cpp
+    src/RayCasting.cpp
+    src/SurfaceReconstruction.cpp
 )
 
 set(CUDA_SOURCES
-    cuda/ray_casting_cuda.cu
-    cuda/Pose_estimation_cuda.cu
+    src/cuda/ray_casting_cuda.cu
+    src/cuda/Pose_estimation_cuda.cu
 )
 
 
 cuda_add_library(cuda_sources ${CUDA_SOURCES})
 
-include_directories(cuda)
+
 link_directories(${FreeImage_LIBRARY_DIR})
 link_directories(${OpenCV_INCLUDE_DIR})
 include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${EIGEN3_INCLUDE_DIR})
-include_directories(cuda)
+include_directories(include)
 
-
-add_executable(KinectFusion ${HEADERS} ${SOURCES})
-target_include_directories(KinectFusion PUBLIC ${EIGEN3_INCLUDE_DIR} ${FreeImage_INCLUDE_DIR} ${OpenCV_INCLUDE_DIR})
+add_executable(KinectFusion ${SOURCES})
+target_include_directories(KinectFusion PUBLIC ${EIGEN3_INCLUDE_DIR} ${FreeImage_INCLUDE_DIR} ${OpenCV_INCLUDE_DIR} include)
 target_link_libraries(KinectFusion general Eigen3::Eigen freeimage ${OpenCV_LIBS} cuda_sources ${CUDA_LIBRARIES})
 
 
